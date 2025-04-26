@@ -1,10 +1,338 @@
 ---
 title: "Ekonometria - projekt"
 output: html_document
-date: "2025-04-26"
+date: "`r Sys.Date()`"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(kableExtra)
+library(naniar)
+library(scales)
+library(e1071)   # dla funkcji skewness
+library(tibble)
+library(corrplot)
+library(tidyr) 
+```
+
+
+
+# Ładowanie danych
+
+```{r dane, echo=FALSE, eval=TRUE, results='asis'}
+dane <- read.csv("dane.csv", sep = ",", header = TRUE)
+```
+
+
+# Opis danych
+
+#### • **cycnt**
+
+Jest to unikalny kod łączący cykl badania PISA i kraj.\
+Pomaga zidentyfikować dane z konkretnego roku i kraju.
+
+#### • **cycle**
+
+Jest to rok badania PISA, zakodowany jako:\
+- `05` = PISA 2012\
+- `06` = PISA 2015\
+- `07` = PISA 2018\
+Pozwala określić, z którego roku pochodzi obserwacja.
+
+#### • **cnt**
+
+To trzyliterowy kod kraju, np. POL = Polska, DEU = Niemcy, FRA = Francja.\
+Służy do identyfikacji kraju.
+
+#### • **schoolid**
+
+ID szkoły, unikalny w obrębie danego kraju i cyklu.\
+Służy do przypisania ucznia do konkretnej szkoły.
+
+#### • **studentid**
+
+ID ucznia -- unikalne w obrębie danej szkoły i cyklu.\
+Pozwala śledzić dane konkretnego ucznia.
+
+#### • **oecd**
+
+Informacja, czy dany kraj należy do OECD:\
+- `1` = kraj OECD\
+- `0` = kraj spoza OECD\
+Umożliwi analizę różnic między krajami OECD i spoza OECD.
+
+#### • **escs_trend**
+
+Zmienna główna -- trendowy indeks statusu społeczno-ekonomicznego ucznia (ESCS), znormalizowany względem OECD 2022 (średnia = 0, odchylenie standardowe = 1).\
+Uwzględnia: - wykształcenie rodziców\
+- zawód rodziców\
+- zasoby edukacyjne w domu\
+Pomaga analizować wpływ statusu społeczno-ekonomicznego na wyniki uczniów.
+
+#### • **hisei_trend**
+
+Trendowy indeks HISEI -- najwyższy status zawodowy rodzica (w ujęciu zgodnym z metodologią z 2018 r.).\
+Określa prestiż społeczny zawodu rodziców -- im wyższy wynik, tym „lepszy" zawód.
+
+#### • **homepos_trend**
+
+Trendowy indeks HOMEPOS -- tzw. **pozycja domowa**, czyli wyposażenie domu w zasoby edukacyjne (np. książki, biurko, komputer, internet).\
+Pomaga ocenić, jakie warunki do nauki ma uczeń w domu.
+
+#### • **paredint_trend**
+
+Trendowy indeks PAREDINT -- poziom wykształcenia rodziców, przekodowany zgodnie ze standardem z 2022 roku.\
+Pokazuje, jak wykształceni są rodzice ucznia (np. podstawowe, średnie, wyższe).
+
+
+# Identyfikacja braków danych i obserwacji odstających
+
+## Braki danych
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+missing_summary <- miss_var_summary(dane)
+
+ggplot(missing_summary, aes(x = reorder(variable, -pct_miss), y = pct_miss)) +
+  geom_bar(stat = "identity", fill = "plum2") +
+  coord_flip() +
+  labs(title = "Procent brakujących wartości w kolumnach",
+       x = "Zmienne",
+       y = "Procent braków (%)") +
+  theme_minimal()
+```
+
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+missing_summary <- missing_summary %>%
+  rename(
+    Zmienna = variable,
+    "Liczba braków" = n_miss,
+    "Procent braków" = pct_miss
+  ) %>%
+  mutate(
+    "Procent braków" = as.numeric(`Procent braków`) / 100,
+    "Procent braków" = percent(`Procent braków`, accuracy = 0.1)
+  )
+
+# Podzielenie tabeli na dwie części
+num_rows <- nrow(missing_summary)
+split_index <- ceiling(num_rows / 2)
+
+# Przygotowanie kolumn dla drugiej połowy tabeli
+Zmienna_2 <- missing_summary$Zmienna[(split_index + 1):num_rows]
+Liczba_brakow_2 <- missing_summary$`Liczba braków`[(split_index + 1):num_rows]
+Procent_brakow_2 <- missing_summary$`Procent braków`[(split_index + 1):num_rows]
+
+# Wyrównanie długości i uzupełnienie brakujących wartości pustymi znakami
+Zmienna_2 <- c(Zmienna_2, rep("", split_index - length(Zmienna_2)))
+Liczba_brakow_2 <- c(Liczba_brakow_2, rep("", split_index - length(Liczba_brakow_2)))
+Procent_brakow_2 <- c(Procent_brakow_2, rep("", split_index - length(Procent_brakow_2)))
+
+# Stworzenie kompaktowej tabeli
+missing_summary_compact <- tibble(
+  Zmienna_1 = missing_summary$Zmienna[1:split_index],
+  `Liczba braków 1` = missing_summary$`Liczba braków`[1:split_index],
+  `Procent braków 1` = missing_summary$`Procent braków`[1:split_index],
+  Zmienna_2 = Zmienna_2,
+  `Liczba braków 2` = Liczba_brakow_2,
+  `Procent braków 2` = Procent_brakow_2
+)
+
+# Wyświetlenie tabeli w nowym formacie
+kable(
+  missing_summary_compact,
+  col.names = c("Zmienna", "Liczba braków", "Procent braków", 
+                "Zmienna", "Liczba braków", "Procent braków"),
+  caption = "Podsumowanie brakujących danych"
+) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed")
+  )
+```
+
+
+## Odstające
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+dane$hisei_trend <- as.numeric(dane$hisei_trend)
+dane$paredint_trend <- as.numeric(dane$paredint_trend)
+dane$escs_trend <- as.numeric(dane$escs_trend)
+dane$homepos_trend <- as.numeric(dane$homepos_trend)
+
+
+```
+
+
+```{r, fig.height=10, fig.width=10, echo=FALSE, eval=TRUE, results='asis'}
+par(mfrow = c(2, 2))
+boxplot(dane$hisei_trend, main = "hisei_trend", col = "skyblue")
+boxplot(dane$paredint_trend, main = "paredint_trend", col = "plum")
+boxplot(dane$escs_trend, main = "escs_trend", col = "peachpuff")
+boxplot(dane$homepos_trend, main = "homepos_trend", col = "salmon")
+
+
+```
+
+
+# Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
+
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+
+zmienne <- c("escs_trend", "hisei_trend", "homepos_trend", "paredint_trend")
+
+oblicz_statystyki <- function(x) {
+  tibble(
+    Mediana = median(x, na.rm = TRUE),
+    Średnia = mean(x, na.rm = TRUE),
+    Min = min(x, na.rm = TRUE),
+    Max = max(x, na.rm = TRUE),
+    Odchylenie_std = sd(x, na.rm = TRUE),
+    Asymetria = skewness(x, na.rm = TRUE)
+  )
+}
+
+statystyki_wszystkie <- lapply(zmienne, function(var) {
+  dane %>%
+    pull(var) %>%
+    oblicz_statystyki() %>%
+    mutate(Zmienna = var)
+}) %>%
+  bind_rows() %>%
+  select(Zmienna, everything())
+
+knitr::kable(statystyki_wszystkie, caption = "Statystyki opisowe")
+
+
+```
+
+
+TUTAJ MACIERZ KORELACJI KTÓRA POMIJA WARTOŚCI BRAKUJĄCE - MUSIMY PODJĄĆ DECYZJE JAK JE CHCEMY UXZUPEŁNIĆ - WG MNIE IMPUTACJA MEDIANĄ
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+attach(dane)
+dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+```
+
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+macierz_korelacji <- cor(dane2, use = "complete.obs")
+
+# Narysuj wykres korelacji
+corrplot(macierz_korelacji, method = "color", type = "upper", 
+         addCoef.col = "black", tl.col = "black", tl.cex = 0.8,
+         col = colorRampPalette(c("blue", "white", "red"))(200))
+```
+
+
+
+
+# Wykresy: histogramy, wykresy rozrzutu, gęstości
+
+## Wykresy gęstości
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+ggplot(dane, aes(x = homepos_trend)) +
+  geom_density(fill = "orange", alpha = 0.5) +
+  ggtitle("Gęstość homepos_trend")
+
+ggplot(dane, aes(x = hisei_trend)) +
+  geom_density(fill = "plum", alpha = 0.5) +
+  ggtitle("Gęstość hisei_trend")
+
+ggplot(dane, aes(x = escs_trend)) +
+  geom_density(fill = "lightblue", alpha = 0.5) +
+  ggtitle("Gęstość escs_trend")
+
+ggplot(dane, aes(x = paredint_trend)) +
+  geom_density(fill = "salmon", alpha = 0.5) +
+  ggtitle("Gęstość paredint_trend")
+
+
+```
+
+
+## Histogramy
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+dane_long <- dane2 %>%
+  pivot_longer(cols = c(homepos_trend, escs_trend, hisei_trend, paredint_trend),
+               names_to = "zmienna", values_to = "wartość")
+ggplot(dane_long, aes(x = wartość)) +
+  geom_histogram(bins = 30, fill = "peachpuff", color = "black") +
+  facet_wrap(~ zmienna, scales = "free") +
+  labs(title = "Histogramy wybranych zmiennych",
+       x = "Wartość",
+       y = "Liczba obserwacji") +
+  theme_minimal()
+
+```
+
+## Wykresy rozrzutu
+
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
+par(mfrow = c(3, 2))
+#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+
+ggplot(dane, aes(x = homepos_trend, y = escs_trend)) +
+  geom_point(color = "mediumvioletred", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: Homepos_trend vs Escs_trend",
+       x = "Homepos_trend",
+       y = "Escs_trend") +
+  theme_minimal()
+
+ggplot(dane, aes(x = homepos_trend, y = hisei_trend)) +
+  geom_point(color = "orange", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: Homepos_trend vs hisei_trend",
+       x = "Homepos_trend",
+       y = "hisei_trend") +
+  theme_minimal()
+
+ggplot(dane, aes(x = homepos_trend, y = paredint_trend)) +
+  geom_point(color = "lightgreen", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: Homepos_trend vs paredint_trend",
+       x = "Homepos_trend",
+       y = "paredint_trend") +
+  theme_minimal()
+
+##############################################################################################################################
+
+
+#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+
+ggplot(dane, aes(x = escs_trend, y = hisei_trend)) +
+  geom_point(color = "yellow", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: escs_trend vs hisei_trend",
+       x = "escs_trend",
+       y = "hisei_trend") +
+  theme_minimal()
+
+ggplot(dane, aes(x = escs_trend, y = paredint_trend)) +
+  geom_point(color = "slateblue1", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: escs_trend vs paredint_trend",
+       x = "escs_trend",
+       y = "paredint_trend") +
+  theme_minimal()
+
+##############################################################################################################################
+
+#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+
+ggplot(dane, aes(x = hisei_trend, y = paredint_trend)) +
+  geom_point(color = "paleturquoise2", alpha = 0.5) +
+  labs(title = "Wykres rozrzutu: hisei_trend vs paredint_trend",
+       x = "hisei_trend",
+       y = "paredint_trend") +
+  theme_minimal()
+
+
 ```
 
