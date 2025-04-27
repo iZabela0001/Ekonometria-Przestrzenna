@@ -19,6 +19,10 @@ library(e1071)   # dla funkcji skewness
 library(tibble)
 library(corrplot)
 library(tidyr) 
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(viridis)
 ```
 
 
@@ -335,4 +339,38 @@ ggplot(dane, aes(x = hisei_trend, y = paredint_trend)) +
 
 
 ```
+
+
+# Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
+
+```{r}
+dane_kraje <- dane %>%
+  group_by(cnt) %>%
+  summarise(
+    escs_trend = mean(escs_trend, na.rm = TRUE),
+    hisei_trend = mean(hisei_trend, na.rm = TRUE),
+    homepos_trend = mean(homepos_trend, na.rm = TRUE),
+    paredint_trend = mean(paredint_trend, na.rm = TRUE)
+  )
+
+mapa_swiat <- ne_countries(scale = "medium", returnclass = "sf")
+
+mapa_dane <- left_join(mapa_swiat, dane_kraje, by = c("iso_a3" = "cnt"))
+
+rysuj_kartogram <- function(zmienna, tytul) {
+  ggplot(mapa_dane) +
+    geom_sf(aes_string(fill = zmienna), color = "white") +
+    scale_fill_viridis(option = "plasma", na.value = "grey90") +
+    labs(fill = zmienna,
+         title = tytul) +
+    theme_minimal()
+}
+
+rysuj_kartogram("escs_trend", "Średni ESCS Trend w krajach")
+rysuj_kartogram("hisei_trend", "Średni HISEI Trend w krajach")
+rysuj_kartogram("homepos_trend", "Średni HOMEPOS Trend w krajach")
+rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
+
+```
+
 
