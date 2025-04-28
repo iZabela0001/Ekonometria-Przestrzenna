@@ -23,16 +23,15 @@ library(sf)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(viridis)
+library(spdep)
+library(rworldmap)
 ```
-
-
 
 # Ładowanie danych
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
 dane <- read.csv("dane.csv", sep = ",", header = TRUE)
 ```
-
 
 # Opis danych
 
@@ -94,6 +93,29 @@ Pomaga ocenić, jakie warunki do nauki ma uczeń w domu.
 Trendowy indeks PAREDINT -- poziom wykształcenia rodziców, przekodowany zgodnie ze standardem z 2022 roku.\
 Pokazuje, jak wykształceni są rodzice ucznia (np. podstawowe, średnie, wyższe).
 
+# Cel projektu
+
+Celem projektu jest analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego uczniów w różnych krajach na podstawie danych z badania PISA (Programme for International Student Assessment). Projekt ma na celu identyfikację geograficznych wzorców nierówności społeczno-ekonomicznych oraz ich potencjalnych powiązań z innymi czynnikami, takimi jak status zawodowy rodziców, zasoby edukacyjne w domu czy poziom wykształcenia rodziców. Analiza może wspierać podejmowanie decyzji w polityce edukacyjnej, szczególnie w kontekście wyrównywania szans edukacyjnych między regionami i krajami.
+
+
+## 2. Struktura badania
+
+### 2.1. Sformułowanie problemu badawczego
+
+**Problem badawczy:**\
+Jakie są przestrzenne różnice w statusie społeczno-ekonomicznym uczniów w krajach uczestniczących w badaniu PISA, i jakie czynniki je wyjaśniają?
+
+**Pytania badawcze:** - Jak przestrzennie rozkłada się status społeczno-ekonomiczny uczniów (`escs_trend`) w krajach OECD i krajach partnerskich? - Czy istnieją przestrzenne wzorce w zakresie zasobów edukacyjnych w domu (`homepos_trend`) oraz statusu zawodowego rodziców (`hisei_trend`)? - Jakie są relacje przestrzenne między wykształceniem rodziców (`paredint_trend`) a statusem społeczno-ekonomicznym uczniów?
+
+**Uzasadnienie wyboru problemu:**\
+Nierówności w statusie społeczno-ekonomicznym mają kluczowy wpływ na wyniki edukacyjne, a ich przestrzenne rozmieszczenie może wskazywać na obszary wymagające interwencji polityki edukacyjnej i społecznej. Analiza danych PISA umożliwia kompleksową ocenę tych nierówności na poziomie międzynarodowym.
+
+**Poziom przestrzenny analizy:**\
+Analiza będzie prowadzona na poziomie krajowym (ISO3 - trzyliterowe kody krajów). W przypadku dostępności dokładniejszych danych możliwe będzie zagęszczenie do poziomu regionów (NUTS-2/3 lub ich odpowiedników w krajach).
+
+### 2.2. Przegląd literatury
+
+idk
 
 # Identyfikacja braków danych i obserwacji odstających
 
@@ -110,7 +132,6 @@ ggplot(missing_summary, aes(x = reorder(variable, -pct_miss), y = pct_miss)) +
        y = "Procent braków (%)") +
   theme_minimal()
 ```
-
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 missing_summary <- missing_summary %>%
@@ -161,6 +182,19 @@ kable(
   )
 ```
 
+Wykres słupkowy przedstawia procent brakujących danych dla każdej zmiennej w zbiorze. Największy odsetek braków występuje w zmiennej:
+
+-   hisei_trend (6,7% braków), następnie w:
+
+-   paredint_trend (3,8% braków),
+
+-   escs_trend (2,4% braków),
+
+-   homepos_trend (2,0% braków).
+
+-   Dla zmiennych identyfikacyjnych (cycnt, cycle, cnt, schoolid, studentid, oecd) nie odnotowano braków.
+
+Braki danych są obecne głównie w zmiennych objaśniających związanych ze statusem społeczno-ekonomicznym, ale ich skala nie przekracza 7%, co pozwala na bezpieczne przeprowadzenie analiz po ewentualnym zastosowaniu imputacji lub usunięciu niekompletnych rekordów.
 
 ## Odstające
 
@@ -173,7 +207,6 @@ dane$homepos_trend <- as.numeric(dane$homepos_trend)
 
 ```
 
-
 ```{r, fig.height=10, fig.width=10, echo=FALSE, eval=TRUE, results='asis'}
 par(mfrow = c(2, 2))
 boxplot(dane$hisei_trend, main = "hisei_trend", col = "skyblue")
@@ -184,9 +217,19 @@ boxplot(dane$homepos_trend, main = "homepos_trend", col = "salmon")
 
 ```
 
+Przedstawiono wykresy pudełkowe dla kluczowych zmiennych ilościowych, umożliwiające identyfikację obserwacji odstających:
+
+1.  hisei_trend: Rozkład wyników jest stosunkowo symetryczny. Nie są widoczne obserwacje odstające co w sumie ma sens bo to określa status zawodowy rodzica.
+
+2.  paredint_trend: Rozkład ma niewielką liczbę obserwacji odstających, głównie na dolnym końcu skali (niskie poziomy wykształcenia rodziców).
+
+3.  escs_trend: Rozkład statusu społeczno-ekonomicznego jest względnie symetryczny, jednak posiada odstające wartości, głównie po stronie negatywnej (niski status społeczno-ekonomiczny).
+
+4.  homepos_trend: Występuje większa liczba obserwacji odstających zarówno poniżej, jak i powyżej głównego rozkładu, co może wskazywać na zróżnicowane wyposażenie domów uczniów w zasoby edukacyjne.
+
+Obserwacje odstające są obecne, ale nie są ekstremalne. W zależności od dalszych analiz, można je uwzględnić lub rozważyć ich ograniczoną korektę.
 
 # Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
-
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 
@@ -217,6 +260,11 @@ knitr::kable(statystyki_wszystkie, caption = "Statystyki opisowe")
 
 ```
 
+-   Średnie i mediany są zbliżone, choć w niektórych przypadkach występuje niewielka asymetria rozkładów (np. wyraźnie lewostronna dla paredint_trend).
+
+-   Rozstęp wartości (min--max) wskazuje na dużą zmienność zwłaszcza dla zmiennych escs_trend i hisei_trend.
+
+-   Odchylenia standardowe pokazują największe zróżnicowanie w zmiennej hisei_trend (status zawodowy rodziców).
 
 TUTAJ MACIERZ KORELACJI KTÓRA POMIJA WARTOŚCI BRAKUJĄCE - MUSIMY PODJĄĆ DECYZJE JAK JE CHCEMY UXZUPEŁNIĆ - WG MNIE IMPUTACJA MEDIANĄ
 
@@ -224,7 +272,6 @@ TUTAJ MACIERZ KORELACJI KTÓRA POMIJA WARTOŚCI BRAKUJĄCE - MUSIMY PODJĄĆ DEC
 attach(dane)
 dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
 ```
-
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 macierz_korelacji <- cor(dane2, use = "complete.obs")
@@ -235,8 +282,21 @@ corrplot(macierz_korelacji, method = "color", type = "upper",
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
 
+1.  escs_trend jest silnie dodatnio skorelowany z:
 
+-   homepos_trend (r = 0,79),
 
+-   hisei_trend (r = 0,79),
+
+-   paredint_trend (r = 0,83).
+
+2. homepos_trend i hisei_trend są umiarkowanie skorelowane (r = 0,44),
+
+3. homepos_trend i paredint_trend również wykazują umiarkowaną korelację (r = 0,45),
+
+4. hisei_trend i paredint_trend mają średnio silną korelację (r = 0,52).
+
+Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos_trend), statusem zawodowym rodziców (hisei_trend), jak i ich wykształceniem (paredint_trend), co potwierdza, że ESCS dobrze syntetyzuje te aspekty społeczno-ekonomiczne.
 
 # Wykresy: histogramy, wykresy rozrzutu, gęstości
 
@@ -262,8 +322,9 @@ ggplot(dane, aes(x = paredint_trend)) +
 
 ```
 
-
 ## Histogramy
+
+Może nałożymy gęstość (pkt wyżej) na histogramy ????
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 dane_long <- dane2 %>%
@@ -281,6 +342,7 @@ ggplot(dane_long, aes(x = wartość)) +
 
 ## Wykresy rozrzutu
 
+TEN KOD ZA DŁUGO SIĘ LADUJE --- TRZEBA GO ZOPTYMALIZOWAĆ
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 par(mfrow = c(3, 2))
@@ -340,7 +402,6 @@ ggplot(dane, aes(x = hisei_trend, y = paredint_trend)) +
 
 ```
 
-
 # Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
 
 ```{r}
@@ -372,5 +433,59 @@ rysuj_kartogram("homepos_trend", "Średni HOMEPOS Trend w krajach")
 rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
 
 ```
+
+
+
+# wspolczynnik moran
+
+```{r}
+# wspolrzedne geograficzne
+country_data <- dane %>%
+  group_by(cnt) %>%
+  summarise(escs_trend = mean(escs_trend, na.rm = TRUE))
+
+# Ptego pewna nie jestem bo mi czat podpowiedział bo my w danych nie mamy jakby map a potrzebujemy obiektu przestrzennego
+world_map <- getMap(resolution = "low")
+country_coords <- data.frame(
+  cnt = world_map@data$ISO3,
+  lon = coordinates(world_map)[, 1],
+  lat = coordinates(world_map)[, 2]
+)
+
+merged_data <- merge(country_data, country_coords, by = "cnt", all.x = TRUE)
+merged_data <- na.omit(merged_data)  
+```
+
+
+```{r}
+coords <- cbind(merged_data$lon, merged_data$lat)
+
+# na zajeciach byly wojewodztwa i ich granice tutaj idk jak ustalic inaczej te granice miedzy krajami ?
+nb <- knn2nb(knearneigh(coords, k = 3)) 
+lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+
+
+merged_data$escs_trend <- as.numeric(merged_data$escs_trend)
+#sum(is.na(merged_data$escs_trend))
+moran_test <- moran.test(merged_data$escs_trend, lw, zero.policy = TRUE)
+print(moran_test)
+```
+
+Wartość statystyki Moran's I = 0.322
+Kraje o podobnych wartościach escs_trend (statusie społeczno-ekonomicznym uczniów) grupują się blisko siebie.
+Np: Jeśli Polska ma wysokie escs_trend, to jej sąsiedzi (Niemcy, Czechy) też prawdopodobnie mają wysokie wartości.
+
+
+p-value = 5.711e-05 (<< 0.05)
+Wynik jest wysoce istotny statystycznie – odrzucamy hipotezę zerową o braku autokorelacji przestrzennej.
+
+
+Standard deviate = 3.8582
+Wartość statystyki jest prawie 4 odchylenia standardowe powyżej oczekiwań (Expectation = -0.015), co potwierdza silny wzorzec przestrzenny.
+
+Status społeczno-ekonomiczny uczniów nie jest rozłożony losowo – istnieją wyraźne regionalne wzorce.
+
+Możemy zobaczy czy klastry pokrywają się z podziałem na kraje OECD np zy kraje OECD mają wyższe escs_trend i grupują się razem.obliczenie lokalnego moran'a (LISA)
+
 
 
