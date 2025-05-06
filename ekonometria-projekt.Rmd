@@ -488,4 +488,40 @@ Status społeczno-ekonomiczny uczniów nie jest rozłożony losowo – istnieją
 Możemy zobaczy czy klastry pokrywają się z podziałem na kraje OECD np zy kraje OECD mają wyższe escs_trend i grupują się razem.obliczenie lokalnego moran'a (LISA)
 
 
+# wspolczynnik LISA
 
+
+```{r}
+
+local_moran <- localmoran(merged_data$escs_trend, lw, zero.policy = TRUE)
+merged_data$Ii <- local_moran[, 1]      # lokalny wskaźnik Morana
+merged_data$P.Ii <- local_moran[, 5]    # p-value
+
+oecd_iso3 <- c(
+  "AUS", "AUT", "BEL", "CAN", "CHL", "COL", "CZE", "DNK", "EST", "FIN", 
+  "FRA", "DEU", "GRC", "HUN", "ISL", "IRL", "ISR", "ITA", "JPN", "KOR", 
+  "LVA", "LTU", "LUX", "MEX", "NLD", "NZL", "NOR", "POL", "PRT", "SVK", 
+  "SVN", "ESP", "SWE", "CHE", "TUR", "GBR", "USA"
+)
+
+merged_data$oecd <- ifelse(merged_data$cnt %in% oecd_iso3, "OECD", "non-OECD")
+
+# 4. Szybka analiza: jakie kraje są w istotnych klastrach?
+# Załóżmy, że interesują nas istotne klastry dodatnie (HH i LL)
+merged_data$cluster_type <- NA
+merged_data$cluster_type[merged_data$Ii > 0 & merged_data$P.Ii < 0.05] <- "HH or LL"
+merged_data$cluster_type[merged_data$Ii < 0 & merged_data$P.Ii < 0.05] <- "Outlier"
+
+# 5. Czy OECD są nadreprezentowane w klastrach?
+table(merged_data$oecd, merged_data$cluster_type)
+
+#merged_data[merged_data$cluster_type == "HH or LL", c("cnt", "oecd", "escs_trend", "Ii", "P.Ii")]
+
+
+```
+
+kraje które nie mają przypisanej wartości cluster_type (czyli NA), to te, dla których lokalny wskaźnik Morana  nie był istotny statystycznie czyli:
+
+nie tworzą wyraźnego klastra o podobnych wartościach escs_trend (ani dodatniego – HH/LL, ani negatywnego – Outlier),
+
+nie odbiegają wystarczająco od otoczenia, by zakwalifikować się jako outlier.
