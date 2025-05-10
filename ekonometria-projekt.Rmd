@@ -25,13 +25,46 @@ library(rnaturalearthdata)
 library(viridis)
 library(spdep)
 library(rworldmap)
+library(dlookr)
 ```
 
 # Ładowanie danych
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
 dane <- read.csv("dane.csv", sep = ",", header = TRUE)
+
 ```
+# 1. Cel projektu
+
+Celem projektu jest analiza przestrzennych różnic w statusie społeczno-ekonomicznym uczniów na podstawie przeskalowanych danych z badania PISA. Zostaną zastosowane metody analizy przestrzennej oraz ekonometrii przestrzennej w celu identyfikacji regionalnych nierówności edukacyjnych i ich uwarunkowań społecznych i ekonomicznych. Projekt ma na celu dostarczenie wniosków wspierających decyzje w polityce edukacyjnej i regionalnej.
+
+# Struktura badania
+
+## 2.1 Sformułowanie problemu badawczego
+
+### Temat analizy:
+
+**Przestrzenne zróżnicowanie statusu społeczno-ekonomicznego uczniów w krajach uczestniczących w badaniu PISA (2012–2018)**
+
+### **Problem badawczy:**
+
+Czy status społeczno-ekonomiczny uczniów (mierzony indeksem ESCS) wykazuje istotne różnice przestrzenne pomiędzy krajami uczestniczącymi w badaniu PISA, a jeśli tak – jakie czynniki społeczno-edukacyjne (wykształcenie rodziców, status zawodowy, zasoby w domu) najlepiej te różnice wyjaśniają?
+
+### **Pytania badawcze:**
+
+1. Jak zmienia się średni status społeczno-ekonomiczny uczniów między krajami i w czasie (2012, 2015, 2018)?
+2. Czy w danych występują struktury przestrzenne, tzn. czy status uczniów w krajach sąsiadujących jest podobny (autokorelacja przestrzenna)?
+3. Które czynniki społeczno-edukacyjne (HISEI, HOMEPOS, PAREDINT) są najsilniej powiązane z poziomem ESCS w różnych krajach?
+4. Czy występują grupy krajów o podobnym profilu społeczno-ekonomicznym uczniów (np. klastry regionalne)?
+
+### **Uzasadnienie wyboru tematu:**
+
+Status społeczno-ekonomiczny uczniów jest silnie powiązany z ich osiągnięciami edukacyjnymi i przyszłymi szansami życiowymi. Analiza jego przestrzennego zróżnicowania pozwala zidentyfikować regiony szczególnie zagrożone nierównościami edukacyjnymi i może wspierać międzynarodowe oraz krajowe polityki wyrównywania szans edukacyjnych.
+
+### **Poziom przestrzenny analizy:**
+
+Analiza będzie przeprowadzona na poziomie **kraju** (identyfikowanego przez zmienną `cnt`), z uwzględnieniem możliwości rozszerzenia na poziom regionalny (np. NUTS-2), jeśli dane przestrzenne będą dostępne (np. shapefile krajów z granicami administracyjnymi).
+
 
 # Opis danych
 
@@ -93,29 +126,36 @@ Pomaga ocenić, jakie warunki do nauki ma uczeń w domu.
 Trendowy indeks PAREDINT -- poziom wykształcenia rodziców, przekodowany zgodnie ze standardem z 2022 roku.\
 Pokazuje, jak wykształceni są rodzice ucznia (np. podstawowe, średnie, wyższe).
 
-# Cel projektu
+# Opis danych wersja 2 - którą wolimy ?
 
-Celem projektu jest analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego uczniów w różnych krajach na podstawie danych z badania PISA (Programme for International Student Assessment). Projekt ma na celu identyfikację geograficznych wzorców nierówności społeczno-ekonomicznych oraz ich potencjalnych powiązań z innymi czynnikami, takimi jak status zawodowy rodziców, zasoby edukacyjne w domu czy poziom wykształcenia rodziców. Analiza może wspierać podejmowanie decyzji w polityce edukacyjnej, szczególnie w kontekście wyrównywania szans edukacyjnych między regionami i krajami.
+Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczniów z różnych krajów i lat. Obejmują 1 447 787 obserwacji z ponad 70 krajów w trzech cyklach badania (2012, 2015, 2018). W analizie wykorzystano zarówno cechy indywidualne uczniów, jak i dane identyfikujące kraj, szkołę i przynależność do OECD.
+
+### **Struktura danych:**
+
+| Zmienna             | Opis                                                                  |
+| ------------------- | --------------------------------------------------------------------- |
+| **cycnt**           | Unikalny identyfikator kraju i cyklu (np. `05POL` = Polska 2012).     |
+| **cycle**           | Rok badania PISA (5 = 2012, 6 = 2015, 7 = 2018).                      |
+| **cnt**             | Kod kraju trzyliterowy (np. `POL`, `DEU`, `USA`).                     |
+| **schoolid**        | ID szkoły (unikalne w obrębie danego kraju i cyklu).                  |
+| **studentid**       | ID ucznia (unikalne w obrębie szkoły i cyklu).                        |
+| **oecd**            | Przynależność kraju do OECD (`1` = tak, `0` = nie).                   |
+| **escs\_trend**     | Indeks statusu społeczno-ekonomicznego ucznia (ESCS, standaryzowany). |
+| **hisei\_trend**    | Indeks najwyższego statusu zawodowego rodzica (HISEI).                |
+| **homepos\_trend**  | Indeks wyposażenia domu w zasoby edukacyjne (HOMEPOS).                |
+| **paredint\_trend** | Poziom wykształcenia rodziców (PAREDINT, wg skali ISCED).             |
+
+### **Charakterystyka danych:**
+
+* **Liczba krajów:** 73 (np. POL, DEU, FRA, JPN, USA, BRA, QAT...)
+* **Lata pomiarów:** 2012, 2015, 2018 (zakodowane jako 5, 6, 7)
+* **Kraje OECD:** rozróżnienie na kraje OECD (`1`) i nie-OECD (`0`)
+* **Zakres zmiennych społeczno-ekonomicznych:** zmienne `escs_trend`, `hisei_trend`, `homepos_trend` i `paredint_trend` opisują status ucznia w ujęciu międzynarodowym, w sposób porównywalny między cyklami.
 
 
-## 2. Struktura badania
 
-### 2.1. Sformułowanie problemu badawczego
 
-**Problem badawczy:**\
-Jakie są przestrzenne różnice w statusie społeczno-ekonomicznym uczniów w krajach uczestniczących w badaniu PISA, i jakie czynniki je wyjaśniają?
 
-**Pytania badawcze:** - Jak przestrzennie rozkłada się status społeczno-ekonomiczny uczniów (`escs_trend`) w krajach OECD i krajach partnerskich? - Czy istnieją przestrzenne wzorce w zakresie zasobów edukacyjnych w domu (`homepos_trend`) oraz statusu zawodowego rodziców (`hisei_trend`)? - Jakie są relacje przestrzenne między wykształceniem rodziców (`paredint_trend`) a statusem społeczno-ekonomicznym uczniów?
-
-**Uzasadnienie wyboru problemu:**\
-Nierówności w statusie społeczno-ekonomicznym mają kluczowy wpływ na wyniki edukacyjne, a ich przestrzenne rozmieszczenie może wskazywać na obszary wymagające interwencji polityki edukacyjnej i społecznej. Analiza danych PISA umożliwia kompleksową ocenę tych nierówności na poziomie międzynarodowym.
-
-**Poziom przestrzenny analizy:**\
-Analiza będzie prowadzona na poziomie krajowym (ISO3 - trzyliterowe kody krajów). W przypadku dostępności dokładniejszych danych możliwe będzie zagęszczenie do poziomu regionów (NUTS-2/3 lub ich odpowiedników w krajach).
-
-### 2.2. Przegląd literatury
-
-idk
 
 # Identyfikacja braków danych i obserwacji odstających
 
@@ -196,6 +236,16 @@ Wykres słupkowy przedstawia procent brakujących danych dla każdej zmiennej w 
 
 Braki danych są obecne głównie w zmiennych objaśniających związanych ze statusem społeczno-ekonomicznym, ale ich skala nie przekracza 7%, co pozwala na bezpieczne przeprowadzenie analiz po ewentualnym zastosowaniu imputacji lub usunięciu niekompletnych rekordów.
 
+```{r imputacjabrakow, echo=FALSE, eval=TRUE, results='asis'}
+dane$hisei_trend<-imputate_na(dane, hisei_trend, method = "median")
+dane$paredint_trend<-imputate_na(dane, paredint_trend, method = "median")
+dane$escs_trend<-imputate_na(dane, escs_trend, method = "median")
+dane$homepos_trend<-imputate_na(dane, homepos_trend, method = "median")
+
+#missing_summary2 <- miss_var_summary(dane)
+```
+
+
 ## Odstające
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
@@ -232,13 +282,10 @@ Obserwacje odstające są obecne, ale nie są ekstremalne. W zależności od dal
 # Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
-
-zmienne <- c("escs_trend", "hisei_trend", "homepos_trend", "paredint_trend")
-
 oblicz_statystyki <- function(x) {
-  tibble(
+  data.frame(
     Mediana = median(x, na.rm = TRUE),
-    Średnia = mean(x, na.rm = TRUE),
+    Srednia = mean(x, na.rm = TRUE),
     Min = min(x, na.rm = TRUE),
     Max = max(x, na.rm = TRUE),
     Odchylenie_std = sd(x, na.rm = TRUE),
@@ -246,17 +293,15 @@ oblicz_statystyki <- function(x) {
   )
 }
 
-statystyki_wszystkie <- lapply(zmienne, function(var) {
-  dane %>%
-    pull(var) %>%
-    oblicz_statystyki() %>%
-    mutate(Zmienna = var)
-}) %>%
-  bind_rows() %>%
-  select(Zmienna, everything())
 
-knitr::kable(statystyki_wszystkie, caption = "Statystyki opisowe")
+tabela <- rbind(
+  cbind(Zmienna = "escs_trend", oblicz_statystyki(dane2$escs_trend)),
+  cbind(Zmienna = "hisei_trend", oblicz_statystyki(dane2$hisei_trend)),
+  cbind(Zmienna = "homepos_trend", oblicz_statystyki(dane2$homepos_trend)),
+  cbind(Zmienna = "paredint_trend", oblicz_statystyki(dane2$paredint_trend))
+)
 
+knitr::kable(tabela, caption = "Statystyki opisowe")
 
 ```
 
@@ -266,7 +311,7 @@ knitr::kable(statystyki_wszystkie, caption = "Statystyki opisowe")
 
 -   Odchylenia standardowe pokazują największe zróżnicowanie w zmiennej hisei_trend (status zawodowy rodziców).
 
-TUTAJ MACIERZ KORELACJI KTÓRA POMIJA WARTOŚCI BRAKUJĄCE - MUSIMY PODJĄĆ DECYZJE JAK JE CHCEMY UXZUPEŁNIĆ - WG MNIE IMPUTACJA MEDIANĄ
+
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 attach(dane)
@@ -274,14 +319,13 @@ dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
 ```
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
-macierz_korelacji <- cor(dane2, use = "complete.obs")
+macierz_korelacji <- cor(dane2)
 
-# Narysuj wykres korelacji
-corrplot(macierz_korelacji, method = "color", type = "upper", 
+corrplot(macierz_korelacji, method = "color", 
          addCoef.col = "black", tl.col = "black", tl.cex = 0.8,
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
-
+OPIS ZROBIONY PRZED IMPUTACJĄ - DO ZMIANY
 1.  escs_trend jest silnie dodatnio skorelowany z:
 
 -   homepos_trend (r = 0,79),
@@ -471,16 +515,16 @@ moran_test <- moran.test(merged_data$escs_trend, lw, zero.policy = TRUE)
 print(moran_test)
 ```
 
-Wartość statystyki Moran's I = 0.322
+Wartość statystyki Moran's I = 0.326
 Kraje o podobnych wartościach escs_trend (statusie społeczno-ekonomicznym uczniów) grupują się blisko siebie.
 Np: Jeśli Polska ma wysokie escs_trend, to jej sąsiedzi (Niemcy, Czechy) też prawdopodobnie mają wysokie wartości.
 
 
-p-value = 5.711e-05 (<< 0.05)
-Wynik jest wysoce istotny statystycznie – odrzucamy hipotezę zerową o braku autokorelacji przestrzennej.
+p-value = 4.645e-05 (<< 0.05)
+Wynik jest wysoce istotny statystycznie – odrzucamy hipotezę zerową o braku autokorelacji przestrzennej. Możemy zatem rozważać modele przestrzenne. 
 
 
-Standard deviate = 3.8582
+Standard deviate = 3.9084
 Wartość statystyki jest prawie 4 odchylenia standardowe powyżej oczekiwań (Expectation = -0.015), co potwierdza silny wzorzec przestrzenny.
 
 Status społeczno-ekonomiczny uczniów nie jest rozłożony losowo – istnieją wyraźne regionalne wzorce.
@@ -519,9 +563,3 @@ table(merged_data$oecd, merged_data$cluster_type)
 
 
 ```
-
-kraje które nie mają przypisanej wartości cluster_type (czyli NA), to te, dla których lokalny wskaźnik Morana  nie był istotny statystycznie czyli:
-
-nie tworzą wyraźnego klastra o podobnych wartościach escs_trend (ani dodatniego – HH/LL, ani negatywnego – Outlier),
-
-nie odbiegają wystarczająco od otoczenia, by zakwalifikować się jako outlier.
