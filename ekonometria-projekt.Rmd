@@ -185,21 +185,17 @@ missing_summary <- missing_summary %>%
     "Procent braków" = percent(`Procent braków`, accuracy = 0.1)
   )
 
-# Podzielenie tabeli na dwie części
 num_rows <- nrow(missing_summary)
 split_index <- ceiling(num_rows / 2)
 
-# Przygotowanie kolumn dla drugiej połowy tabeli
 Zmienna_2 <- missing_summary$Zmienna[(split_index + 1):num_rows]
 Liczba_brakow_2 <- missing_summary$`Liczba braków`[(split_index + 1):num_rows]
 Procent_brakow_2 <- missing_summary$`Procent braków`[(split_index + 1):num_rows]
 
-# Wyrównanie długości i uzupełnienie brakujących wartości pustymi znakami
 Zmienna_2 <- c(Zmienna_2, rep("", split_index - length(Zmienna_2)))
 Liczba_brakow_2 <- c(Liczba_brakow_2, rep("", split_index - length(Liczba_brakow_2)))
 Procent_brakow_2 <- c(Procent_brakow_2, rep("", split_index - length(Procent_brakow_2)))
 
-# Stworzenie kompaktowej tabeli
 missing_summary_compact <- tibble(
   Zmienna_1 = missing_summary$Zmienna[1:split_index],
   `Liczba braków 1` = missing_summary$`Liczba braków`[1:split_index],
@@ -209,7 +205,6 @@ missing_summary_compact <- tibble(
   `Procent braków 2` = Procent_brakow_2
 )
 
-# Wyświetlenie tabeli w nowym formacie
 kable(
   missing_summary_compact,
   col.names = c("Zmienna", "Liczba braków", "Procent braków", 
@@ -305,11 +300,13 @@ knitr::kable(tabela, caption = "Statystyki opisowe")
 
 ```
 
--   Średnie i mediany są zbliżone, choć w niektórych przypadkach występuje niewielka asymetria rozkładów (np. wyraźnie lewostronna dla paredint_trend).
+Dla zmiennej escs_trend (trend statusu społeczno-ekonomicznego uczniów), średnia wynosi ok. -0.40, a mediana -0.32, co sugeruje, że wartości są lekko przesunięte w lewo (potwierdza to też ujemna asymetria: -0.49). Rozstęp wyników jest szeroki – od ok. -9.86 do 4.70, a odchylenie standardowe to 1.13, co wskazuje na umiarkowane zróżnicowanie.
 
--   Rozstęp wartości (min--max) wskazuje na dużą zmienność zwłaszcza dla zmiennych escs_trend i hisei_trend.
+W przypadku hisei_trend (trend prestiżu zawodowego rodziców), średnia to 49.4, zbliżona do mediany (50.37), co świadczy o symetrycznym rozkładzie (asymetria bliska zeru). Wartości mieszczą się w zakresie od 11 do ok. 89, a odchylenie standardowe (21.85) pokazuje dość dużą zmienność.
 
--   Odchylenia standardowe pokazują największe zróżnicowanie w zmiennej hisei_trend (status zawodowy rodziców).
+Dla homepos_trend (trend zasobów domowych), wartości wahają się od -6.80 do 3.65, przy średniej 0.11 i medianie 0.15. Rozkład jest lekko lewostronny (asymetria: -0.22), a zróżnicowanie niskie (odchylenie: 0.59).
+
+Zmienna paredint_trend (trend wykształcenia rodziców) ma średnią 13.24 i medianę 14.5, co może wskazywać na lekką asymetrię lewostronną (-1.18). Zakres danych (3–16) i relatywnie wysokie odchylenie standardowe (2.99) sugerują znaczną różnorodność w poziomie wykształcenia rodziców między krajami.
 
 
 
@@ -325,20 +322,19 @@ corrplot(macierz_korelacji, method = "color",
          addCoef.col = "black", tl.col = "black", tl.cex = 0.8,
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
-OPIS ZROBIONY PRZED IMPUTACJĄ - DO ZMIANY
 1.  escs_trend jest silnie dodatnio skorelowany z:
 
--   homepos_trend (r = 0,79),
+-   homepos_trend (r = 0,78),
 
--   hisei_trend (r = 0,79),
+-   hisei_trend (r = 0,77),
 
--   paredint_trend (r = 0,83).
+-   paredint_trend (r = 0,82).
 
-2. homepos_trend i hisei_trend są umiarkowanie skorelowane (r = 0,44),
+2. homepos_trend i hisei_trend są umiarkowanie skorelowane (r = 0,42),
 
-3. homepos_trend i paredint_trend również wykazują umiarkowaną korelację (r = 0,45),
+3. homepos_trend i paredint_trend również wykazują umiarkowaną korelację (r = 0,44),
 
-4. hisei_trend i paredint_trend mają średnio silną korelację (r = 0,52).
+4. hisei_trend i paredint_trend mają średnio silną korelację (r = 049).
 
 Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos_trend), statusem zawodowym rodziców (hisei_trend), jak i ich wykształceniem (paredint_trend), co potwierdza, że ESCS dobrze syntetyzuje te aspekty społeczno-ekonomiczne.
 
@@ -383,6 +379,20 @@ ggplot(dane_long, aes(x = wartość)) +
   theme_minimal()
 
 ```
+
+Histogram zmiennej escs_trend, czyli ogólnego wskaźnika statusu społeczno-ekonomicznego uczniów, przedstawia rozkład zbliżony do normalnego, z lekką skośnością. Większość obserwacji koncentruje się wokół wartości bliskich zeru, co sugeruje, że przeważają uczniowie o przeciętnym statusie społeczno-ekonomicznym. Ekstremalnie niskie lub wysokie wartości są stosunkowo rzadkie, co może świadczyć o względnym wyrównaniu warunków społecznych wśród badanych uczniów.
+
+
+Zmienna hisei_trend, odzwierciedlająca status zawodowy rodziców, ma wielomodalny rozkład (rozkład, który ma więcej niż jedno maksimum (szczyt) w wykresie), co oznacza obecność kilku wyraźnych szczytów. Wskazuje to na istnienie kilku dominujących grup zawodowych, takich jak np. robotnicy, specjaliści czy menedżerowie. Takie zróżnicowanie sugeruje dużą różnorodność środowisk zawodowych, z jakich pochodzą uczniowie, oraz możliwe wpływy struktury rynku pracy w poszczególnych krajach.
+
+Rozkład zmiennej homepos_trend, opisującej zasoby edukacyjne w domu (np. liczba książek, komputery, biurko), również zbliżony jest do rozkładu normalnego, z lekkim przechyleniem. Najwięcej uczniów ma dostęp do umiarkowanych lub przeciętnych zasobów edukacyjnych, natomiast skrajnie niskie zasoby występują rzadziej. Wskazuje to na pewien stopień wyrównania dostępu do podstawowych narzędzi wspierających edukację.
+
+
+
+W przypadku zmiennej paredint_trend, mierzącej liczbę lat nauki rodziców (czyli ich poziom wykształcenia), widoczny jest dyskretny rozkład ze szczytami w okolicach 6, 9, 12 i 15 lat edukacji. Oznacza to, że wielu rodziców ukończyło typowe poziomy nauczania, odpowiadające podstawowemu, średniemu oraz wyższemu wykształceniu. Najwięcej uczniów pochodzi z rodzin, w których rodzice mają co najmniej wykształcenie średnie, co może mieć znaczenie dla szans edukacyjnych tych uczniów.
+
+
+
 
 ## Wykresy rozrzutu
 
@@ -478,6 +488,36 @@ rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
 
 ```
 
+Średni ESCS Trend w krajach
+
+Mapa przedstawia przestrzenne zróżnicowanie średniego trendowego indeksu statusu społeczno-ekonomicznego uczniów (ESCS) w poszczególnych krajach uczestniczących w badaniu PISA. Wartości dodatnie (w odcieniach żółci i pomarańczu) oznaczają kraje, w których uczniowie mają wyższy status społeczno-ekonomiczny niż średnia OECD. Z kolei wartości ujemne (w odcieniach fioletu i granatu) wskazują na niższy status społeczno-ekonomiczny.
+Mapa pokazuje wyraźne zróżnicowanie pomiędzy regionami — wyższe wartości dominują w Europie Północnej, Kanadzie i Australii, natomiast niższe widoczne są m.in. w Ameryce Południowej, Maroko, Arabia Saudyjska. 
+Zróżnicowanie indeksu ESCS może odzwierciedlać poziom rozwoju społeczno-gospodarczego i dostęp uczniów do zasobów edukacyjnych. Może to mieć istotne znaczenie dla planowania polityk edukacyjnych i społecznych w danym kraju.
+
+
+Średni HISEI Trend w krajach
+
+Mapa pokazuje średnią wartość trendowego indeksu HISEI w krajach objętych badaniem PISA. HISEI odzwierciedla najwyższy status zawodowy rodzica ucznia. Im wyższy wynik, tym bardziej prestiżowy zawód zajmuje przynajmniej jeden z rodziców. W krajach rozwiniętych, takich jak Kanada, Australia czy kraje skandynawskie, wartości HISEI są wyższe, co może świadczyć o wyższym prestiżu zawodowym rodziców uczniów. Niższe wartości w niektórych krajach Ameryki Południowej (np Brazylia), Europy Południowo-Wschodniej mogą wskazywać na ograniczony dostęp do zawodów o wyższym statusie społecznym.
+
+
+Średni HOMEPOS Trend w krajach
+
+Wykres przedstawia średni poziom zasobów edukacyjnych w domach uczniów (indeks homepos_trend) w różnych krajach uczestniczących w badaniu PISA. Wysokie wartości (żółte i pomarańczowe odcienie) wskazują na lepsze wyposażenie domów w środki wspierające naukę, takie jak książki, biurka, komputery czy internet. Niskie wartości (fioletowe i niebieskie odcienie) sugerują niedobór tych zasobów.
+Można zauważyć wyraźne różnice między krajami rozwiniętymi a rozwijającymi się – np. wysoki poziom zasobów w krajach skandynawskich, Kanadzie i Australii vs. niski poziom w Ameryce Południowej i niektórych krajach Azji.
+
+
+Średni PAREDINT Trend w krajach
+Wykres ilustruje średni poziom wykształcenia rodziców uczniów (paredint_trend) w poszczególnych krajach, oparty na skali międzynarodowej (ISCED). Wyższe wartości (żółto-pomarańczowe odcienie) oznaczają wyższy przeciętny poziom wykształcenia rodziców, np. wykształcenie wyższe. Niższe wartości (fioletowe odcienie) sugerują, że dominujące jest wykształcenie średnie lub podstawowe.
+Wysoki poziom można zaobserwować m.in. w krajach Europy, Kanadzie, Australii, natomiast niski – w wielu państwach Ameryki Południowej, Arabii Saudyjskiej.
+
+
+Wnioski porównawcze
+Kraje rozwinięte (np. Skandynawia, Kanada, Australia, Holandia) wypadają konsekwentnie wysoko we wszystkich wskaźnikach – co świadczy o ich zrównoważonym profilu społeczno-edukacyjnym.
+Kraje Ameryki Południowej mają najniższe wartości we wszystkich trendach, co pokazuje strukturalne problemy społeczno-ekonomiczne przekładające się na nierówności edukacyjne.
+W niektórych krajach występuje rozbieżność między wskaźnikami, np. wysoki status zawodowy rodziców nie zawsze idzie w parze z wyposażeniem domów edukacyjnie (np. kraje Europy).
+
+ESCS dobrze oddaje ogólny poziom, ale analiza komponentów (HISEI, HOMEPOS, PAREDINT) pozwala lepiej zrozumieć źródła różnic między krajami.
+
 
 
 # wspolczynnik moran
@@ -563,3 +603,41 @@ table(merged_data$oecd, merged_data$cluster_type)
 
 
 ```
+
+
+```{r}
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+map_data <- merge(world, merged_data, by.x = "iso_a3", by.y = "cnt", all.x = FALSE)
+
+map_data$significant <- map_data$P.Ii < 0.05
+ggplot(data = map_data) +
+  geom_sf(aes(fill = significant), color = "black", size = 0.1) +
+  scale_fill_manual(
+    values = c("white", "red"),
+    labels = c("Nieistotne", "Istotne"),
+    name = "Istotność"
+  ) +
+  labs(
+    title = "Lokalna istotność statystyki Moran's I dla escs_trend",
+    subtitle = "Czerwone kraje tworzą istotne klastry wartości escs_trend"
+  ) +
+  theme_minimal()
+```
+
+Czerwonym kolorem na mapie oznaczono kraje, dla których stwierdzono istotną wartość lokalnej statystyki Morana
+oznacza to, że kraje te otoczone są krajami o podobnej wartości analizowanego zjawiska
+
+
+
+
+
+
+
+
+
+
+
+
+
+
