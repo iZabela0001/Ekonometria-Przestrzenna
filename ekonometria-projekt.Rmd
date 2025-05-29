@@ -675,7 +675,7 @@ Analiza kryterium (AIC) wskazuje, że usunięcie którejkolwiek ze zmiennych skt
 Model regresji potwierdza, że warunki domowe, status zawodowy rodziców oraz  ich zaangażowanie w edukację dziecka mają silny i pozytywny wpływ na wskaźnik  społeczno-ekonomiczny uczniów. W szczególności zasoby edukacyjne w domu  (np. liczba książek, dostęp do internetu, miejsce do nauki) mają największe znaczenie spośród analizowanych czynników.
 
 
-# Model SAR i SEM & porównanie modeli 
+# Model SAR i SEM & porównanie modeli // ponowne OLS i test Morana
 ```{r}
 
 country_data <- dane %>%
@@ -753,9 +753,29 @@ Co więcej, porównanie wartości AIC wykazało, że model OLS (AIC = -388.03) m
 
 Ostatecznie, modele przestrzenne nie wniosły dodatkowej wartości względem klasycznego OLS, a zależności między krajami w kontekście zmiennej **escs_trend** można wyjaśnić bez potrzeby uwzględniania efektów przestrzennych.
 
+# Model Durbina
+```{r}
 
+sdm_model <- lagsarlm(
+  escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
+  data = merged_data,
+  listw = lw,
+  type = "mixed",         
+  method = "eigen",
+  zero.policy = TRUE
+)
 
+summary(sdm_model)
 
+```
+Model Durbin (SDM) został wykorzystany jako rozszerzenie modelu SAR. Uwzględnia on nie tylko wpływ przestrzennego opóźnienia zmiennej zależnej, ale też sprawdza, czy wartości zmiennych objaśniających w sąsiednich krajach mają znaczenie dla poziomu **escs_trend**.
 
+Wyniki pokazały, że wszystkie lokalne zmienne – **hisei_trend** (β = 0.0191), **homepos_trend** (β = 0.8023) i **paredint_trend** (β = 0.1709) – miały pozytywny i istotny wpływ na **escs_trend** (p < 0.001). Z kolei ich przestrzenne odpowiedniki, np. **lag.homepos_trend** (β = 0.0505, p = 0.70), nie były istotne statystycznie. To znaczy, że sytuacja w krajach sąsiednich raczej nie wpływa na poziom ESCS.
+
+Także współczynnik rho, który mierzy przestrzenne zależności w zmiennej zależnej, nie był istotny (rho = -0.086, p = 0.61).
+
+Model Durbin miał wyższy AIC (-382.29) niż klasyczny model OLS (-388.03), co oznacza, że był trochę gorzej dopasowany.
+
+Nie znaleziono zatem dowodów na to, że czynniki przestrzenne wpływają na poziom **escs_trend**. Lepiej sprawdza się zwykła regresja, oparta tylko na lokalnych danych z danego kraju.
 
 
