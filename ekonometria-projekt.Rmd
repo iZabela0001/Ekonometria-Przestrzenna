@@ -26,6 +26,9 @@ library(viridis)
 library(spdep)
 library(rworldmap)
 library(dlookr)
+library(readxl)
+library(spatialreg)
+library(standardize)
 ```
 
 # Ładowanie danych
@@ -629,10 +632,59 @@ Czerwonym kolorem na mapie oznaczono kraje, dla których stwierdzono istotną wa
 oznacza to, że kraje te otoczone są krajami o podobnej wartości analizowanego zjawiska
 
 
+# Estymacja klasycznego modelu OLS 
+```{r}
+
+model_escs <- lm(
+  escs_trend ~ hisei_trend +
+    homepos_trend +
+    paredint_trend,
+  data = dane
+)
+summary(model_escs)
+
+model_best_stat <- step(model_escs, direction = "backward")
+summary(model_best_stat)
 
 
+```
+W celu zbadania, które czynniki mają wpływ na trend zmiennej zależnej **escs_trend** (wskaźnika społeczno-ekonomicznego uczniów),
+przeprowadzono analizę regresji liniowej, w której jako zmienne niezależne uwzględniono: 
+
+- **hisei_trend** (poziom statusu zawodowego rodziców),
+
+- **homepos_trend** (posiadane zasoby edukacyjne w domu),
+
+- **paredint_trend** (zaangażowanie rodziców w edukację),
 
 
+Wszystkie trzy zmienne niezależne okazały się statystycznie istotne na poziomie istotności p < 0,001.
+
+- **hisei_trend** (0,0188) – wzrost statusu zawodowego rodziców o 1 jednostkę  wiąże się ze wzrostem escs_trend średnio o 0,0188 jednostki, przy pozostałych zmiennych stałych.
+
+- **homepos_trend**(0,8111) – największy wpływ na escs_trend ma liczba zasobów edukacyjnych w domu. Każda jednostka wzrostu tej zmiennej przekłada się na wzrost wskaźnika społeczno-ekonomicznego o 0,8111 jednostki.
+
+- **paredint_trend** (0,1712) – większe zaangażowanie rodziców w edukację dziecka  również wpływa pozytywnie na escs_trend, choć w mniejszym stopniu niż homepos_trend.
+
+Model również wykazał bardzo wysokie dopasowanie do danych: 
+- **R² = 0,9868**, co oznacza, że aż 98,68% zmienności wskaźnika escs_trend można wyjaśnić za pomocą zastosowanych zmiennych niezależnych.
+- **Statystyka F= 3.62e+07** przy p < 2,2e-16 potwierdza, że model jako całość jest statystycznie istotny.
+
+Analiza kryterium (AIC) wskazuje, że usunięcie którejkolwiek ze zmiennych sktutkuje  znacznym pogorszeniem dopasowania modelu (istotny wzrost RSS i AIC), co oznacza, że każda z uwzględnionych zmiennych wnosi istotną wartość informacyjną.
+
+Model regresji potwierdza, że warunki domowe, status zawodowy rodziców oraz  ich zaangażowanie w edukację dziecka mają silny i pozytywny wpływ na wskaźnik  społeczno-ekonomiczny uczniów. W szczególności zasoby edukacyjne w domu  (np. liczba książek, dostęp do internetu, miejsce do nauki) mają największe znaczenie spośród analizowanych czynników.
+
+
+# Budowa modelu przestrzennego: SAR (model z opóźnieniem przestrzennym) lub SEM (model błędu przestrzennego)
+```{r}
+
+```
+
+
+# Opcjonalnie: model Durbin lub GWR (geograficznie ważona regresja)
+```{r}
+
+```
 
 
 
