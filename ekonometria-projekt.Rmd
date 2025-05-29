@@ -646,8 +646,8 @@ summary(model_escs)
 model_best_stat <- step(model_escs, direction = "backward")
 summary(model_best_stat)
 
-
 ```
+
 W celu zbadania, które czynniki mają wpływ na trend zmiennej zależnej **escs_trend** (wskaźnika społeczno-ekonomicznego uczniów),
 przeprowadzono analizę regresji liniowej, w której jako zmienne niezależne uwzględniono: 
 
@@ -675,17 +675,83 @@ Analiza kryterium (AIC) wskazuje, że usunięcie którejkolwiek ze zmiennych skt
 Model regresji potwierdza, że warunki domowe, status zawodowy rodziców oraz  ich zaangażowanie w edukację dziecka mają silny i pozytywny wpływ na wskaźnik  społeczno-ekonomiczny uczniów. W szczególności zasoby edukacyjne w domu  (np. liczba książek, dostęp do internetu, miejsce do nauki) mają największe znaczenie spośród analizowanych czynników.
 
 
-# Budowa modelu przestrzennego: SAR (model z opóźnieniem przestrzennym) lub SEM (model błędu przestrzennego)
+# Model SAR i SEM & porównanie modeli 
 ```{r}
+
+country_data <- dane %>%
+  group_by(cnt) %>%
+  summarise(
+    escs_trend = mean(escs_trend, na.rm = TRUE),
+    hisei_trend = mean(hisei_trend, na.rm = TRUE),
+    homepos_trend = mean(homepos_trend, na.rm = TRUE),
+    paredint_trend = mean(paredint_trend, na.rm = TRUE)
+  )
+
+world_map <- getMap(resolution = "low")
+country_coords <- data.frame(
+  cnt = world_map@data$ISO3,
+  lon = coordinates(world_map)[, 1],
+  lat = coordinates(world_map)[, 2]
+)
+
+merged_data <- merge(country_data, country_coords, by = "cnt", all.x = FALSE)
+merged_data <- na.omit(merged_data)  
+
+
+coords <- cbind(merged_data$lon, merged_data$lat)
+nb <- knn2nb(knearneigh(coords, k = 3))
+lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
+
+
+ols_model <- lm(
+  escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
+  data = merged_data
+)
+summary(ols_model)
+
+moran.test(residuals(ols_model), lw, zero.policy = TRUE)
+
+sar_model <- lagsarlm(
+  escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
+  data = merged_data,
+  listw = lw,
+  method = "eigen",
+  zero.policy = TRUE
+)
+summary(sar_model)
+
+
+sem_model <- errorsarlm(
+  escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
+  data = merged_data,
+  listw = lw,
+  method = "eigen",
+  zero.policy = TRUE
+)
+summary(sem_model)
+
+AIC(ols_model, sar_model, sem_model)
+
 
 ```
 
+W analizie wykorzystano dane z 68 krajów, dla których dostępne były kompletne informacje nt. zmiennych objaśniających **(hisei_trend, homepos_trend, paredint_trend)** oraz współrzędnych geograficznych **(lon, lat)**. Kraje (3) z brakami zostały usunięte, aby zapewnić pełną spójność wszystkich estymowanych modeli.
 
-# Opcjonalnie: model Durbin lub GWR (geograficznie ważona regresja)
-```{r}
+Model OLS został ponownie oszacowany na tym samym zestawie danych, co modele przestrzenne, aby umożliwić bezpośrednie porównanie ich dopasowania (AIC)  i zapewnić porównywalność wyników.
 
-```
+Model klasyczny (OLS) wykazał, że wszystkie trzy zmienne objaśniające miały pozytywny i statystycznie istotny wpływ na **escs_trend**, co oznacza, że wyższy status zawodowy rodziców **(hisei_trend)**, lepsze zasoby edukacyjne w domu **(homepos_trend)** oraz wyższy poziom wykształcenia rodziców **(paredint_trend)** wiążą się z wyższym statusem społeczno-ekonomicznym uczniów. Model cechował się bardzo wysokim dopasowaniem **(R² = 0.9994)**, co sugeruje niemal pełne wyjaśnienie zmienności zmiennej zależnej.
 
+Test Morana dla reszt modelu OLS (I = -0.05, p = 0.69) nie wykazał istotnej autokorelacji przestrzennej. Oznacza to, że reszty modelu są niezależne przestrzennie, a więc nie ma formalnej konieczności stosowania modeli przestrzennych.
+
+Niemniej jednak, oszacowano również modele SAR (z opóźnieniem przestrzennym) i SEM (z błędem przestrzennym) w celu weryfikacji, czy uwzględnienie komponentów przestrzennych wpłynie na dopasowanie modelu. W obu przypadkach współczynniki przestrzenne okazały się statystycznie nieistotne:
+
+ - **SAR**: rho = -0.001, p = 0.83
+
+ - **SEM**: lambda = -0.083, p = 0.62
+
+Co więcej, porównanie wartości AIC wykazało, że model OLS (AIC = -388.03) miał lepsze dopasowanie niż modele SAR (AIC = -386.08) i SEM (AIC = -386.32).
+
+Ostatecznie, modele przestrzenne nie wniosły dodatkowej wartości względem klasycznego OLS, a zależności między krajami w kontekście zmiennej **escs_trend** można wyjaśnić bez potrzeby uwzględniania efektów przestrzennych.
 
 
 
