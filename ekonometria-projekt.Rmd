@@ -1,6 +1,8 @@
 ---
 title: "Ekonometria - projekt"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 date: "`r Sys.Date()`"
 ---
 
@@ -215,6 +217,11 @@ Obserwacje odstające są obecne, ale nie są ekstremalne. W zależności od dal
 # Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
+attach(dane)
+dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+```
+
+```{r, echo=FALSE, results='asis', eval=TRUE}
 oblicz_statystyki <- function(x) {
   data.frame(
     Mediana = median(x, na.rm = TRUE),
@@ -246,12 +253,6 @@ Dla homepos_trend (trend zasobów domowych), wartości wahają się od -6.80 do 
 
 Zmienna paredint_trend (trend wykształcenia rodziców) ma średnią 13.24 i medianę 14.5, co może wskazywać na lekką asymetrię lewostronną (-1.18). Zakres danych (3–16) i relatywnie wysokie odchylenie standardowe (2.99) sugerują znaczną różnorodność w poziomie wykształcenia rodziców między krajami.
 
-
-
-```{r, echo=FALSE, results='asis', eval=TRUE}
-attach(dane)
-dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-```
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 macierz_korelacji <- cor(dane2)
