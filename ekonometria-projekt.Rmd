@@ -68,68 +68,7 @@ Status społeczno-ekonomiczny uczniów jest silnie powiązany z ich osiągnięci
 
 Analiza będzie przeprowadzona na poziomie **kraju** (identyfikowanego przez zmienną `cnt`), z uwzględnieniem możliwości rozszerzenia na poziom regionalny (np. NUTS-2), jeśli dane przestrzenne będą dostępne (np. shapefile krajów z granicami administracyjnymi).
 
-
 # Opis danych
-
-#### • **cycnt**
-
-Jest to unikalny kod łączący cykl badania PISA i kraj.\
-Pomaga zidentyfikować dane z konkretnego roku i kraju.
-
-#### • **cycle**
-
-Jest to rok badania PISA, zakodowany jako:\
-- `05` = PISA 2012\
-- `06` = PISA 2015\
-- `07` = PISA 2018\
-Pozwala określić, z którego roku pochodzi obserwacja.
-
-#### • **cnt**
-
-To trzyliterowy kod kraju, np. POL = Polska, DEU = Niemcy, FRA = Francja.\
-Służy do identyfikacji kraju.
-
-#### • **schoolid**
-
-ID szkoły, unikalny w obrębie danego kraju i cyklu.\
-Służy do przypisania ucznia do konkretnej szkoły.
-
-#### • **studentid**
-
-ID ucznia -- unikalne w obrębie danej szkoły i cyklu.\
-Pozwala śledzić dane konkretnego ucznia.
-
-#### • **oecd**
-
-Informacja, czy dany kraj należy do OECD:\
-- `1` = kraj OECD\
-- `0` = kraj spoza OECD\
-Umożliwi analizę różnic między krajami OECD i spoza OECD.
-
-#### • **escs_trend**
-
-Zmienna główna -- trendowy indeks statusu społeczno-ekonomicznego ucznia (ESCS), znormalizowany względem OECD 2022 (średnia = 0, odchylenie standardowe = 1).\
-Uwzględnia: - wykształcenie rodziców\
-- zawód rodziców\
-- zasoby edukacyjne w domu\
-Pomaga analizować wpływ statusu społeczno-ekonomicznego na wyniki uczniów.
-
-#### • **hisei_trend**
-
-Trendowy indeks HISEI -- najwyższy status zawodowy rodzica (w ujęciu zgodnym z metodologią z 2018 r.).\
-Określa prestiż społeczny zawodu rodziców -- im wyższy wynik, tym „lepszy" zawód.
-
-#### • **homepos_trend**
-
-Trendowy indeks HOMEPOS -- tzw. **pozycja domowa**, czyli wyposażenie domu w zasoby edukacyjne (np. książki, biurko, komputer, internet).\
-Pomaga ocenić, jakie warunki do nauki ma uczeń w domu.
-
-#### • **paredint_trend**
-
-Trendowy indeks PAREDINT -- poziom wykształcenia rodziców, przekodowany zgodnie ze standardem z 2022 roku.\
-Pokazuje, jak wykształceni są rodzice ucznia (np. podstawowe, średnie, wyższe).
-
-# Opis danych wersja 2 - którą wolimy ?
 
 Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczniów z różnych krajów i lat. Obejmują 1 447 787 obserwacji z ponad 70 krajów w trzech cyklach badania (2012, 2015, 2018). W analizie wykorzystano zarówno cechy indywidualne uczniów, jak i dane identyfikujące kraj, szkołę i przynależność do OECD.
 
@@ -154,10 +93,6 @@ Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczn
 * **Lata pomiarów:** 2012, 2015, 2018 (zakodowane jako 5, 6, 7)
 * **Kraje OECD:** rozróżnienie na kraje OECD (`1`) i nie-OECD (`0`)
 * **Zakres zmiennych społeczno-ekonomicznych:** zmienne `escs_trend`, `hisei_trend`, `homepos_trend` i `paredint_trend` opisują status ucznia w ujęciu międzynarodowym, w sposób porównywalny między cyklami.
-
-
-
-
 
 
 # Identyfikacja braków danych i obserwacji odstających
