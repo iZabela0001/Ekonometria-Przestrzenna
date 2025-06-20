@@ -3,6 +3,12 @@ title: "Analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego 
 author: "Izabela Reszka, Klaudia Woźniak, Piotr Wiśniewski"
 date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output:
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    toc: true
+    toc_depth: 2
+    fig_caption: true
   html_document:
     theme: cerulean
     highlight: tango
@@ -11,12 +17,6 @@ output:
     toc_float: true # Pływający spis treści w HTML
     number_sections: true
     code_folding: hide
-  pdf_document:
-    latex_engine: xelatex
-    number_sections: true
-    toc: true
-    toc_depth: 2
-    fig_caption: true
 # Uwaga: poniższe opcje wymagają zaawansowanej konfiguracji LaTeX
 # includes:
 #   in_header: header.tex
@@ -562,7 +562,9 @@ Analiza porównawcza wszystkich czterech kartogramów prowadzi do jednoznacznego
 
 Regiony takie jak **Skandynawia, Kanada, Australia i Europa Zachodnia** tworzą spójny klaster o wysokim kapitale ludzkim (wykształcenie), zawodowym (prestiż pracy) i materialnym (zasoby w domu). Z kolei kraje **Ameryki Południowej i części Azji** tworzą klaster o systematycznie niższych wartościach we wszystkich tych wymiarach. Ta silna spójność przestrzenna i wizualna identyfikacja klastrów "bogatych" i "biednych" regionów silnie sugeruje, że w dalszej analizie mogą pojawić się **istotne efekty autokorelacji przestrzennej**, które zbadamy za pomocą wskaźnika I Morana.
 
-# Globalna autokorelacja przestrzenna: Współczynnik I Morana
+# Eksploracyjna analiza danych przestrzennych (ESDA)
+
+## Globalna autokorelacja przestrzenna: Współczynnik I Morana
 
 Współczynnik I Morana to podstawowy test sprawdzający, czy wartości analizowanej zmiennej są w przestrzeni rozmieszczone losowo, czy też tworzą geograficzne wzorce.
 
@@ -622,7 +624,7 @@ kable(wyniki_tabelka, digits = 6, caption = "Wyniki testu globalnej autokorelacj
 
 ```
 
-### **Interpretacja wyników testu I Morana**
+### Interpretacja wyników testu I Morana
 
 Wyniki testu jednoznacznie wskazują na istnienie globalnej autokorelacji przestrzennej. Obliczona wartość **statystyki I Morana wyniosła 0.326**, co jest wartością dodatnią, świadczącą o tendencji do grupowania się podobnych wartości w przestrzeni. Oznacza to, że kraje o podobnym średnim statusie społeczno-ekonomicznym uczniów (`escs_trend`) mają tendencję do występowania blisko siebie, tworząc regionalne skupiska.
 
@@ -630,7 +632,7 @@ Zaobserwowany wzorzec jest **wysoce istotny statystycznie**, o czym świadczy p-
 
 Stwierdzenie istnienia globalnej autokorelacji uzasadnia dalsze, bardziej szczegółowe badanie w celu zidentyfikowania lokalizacji konkretnych klastrów za pomocą lokalnych statystyk (LISA).
 
-# Lokalne wskaźniki autokorelacji przestrzennej (LISA)
+## Lokalne wskaźniki autokorelacji przestrzennej (LISA)
 
 Test I Morana potwierdził istnienie globalnej autokorelacji przestrzennej, co oznacza, że dane nie są rozmieszczone losowo. Jednakże, jako wskaźnik globalny, nie informuje on, *w których konkretnie miejscach* występują skupiska.
 
@@ -729,7 +731,7 @@ ggplot(data = mapa_lisa_dane) +
 
 ```
 
-### **Interpretacja wyników analizy LISA**
+### Interpretacja wyników analizy LISA
 
 Analiza LISA precyzyjnie identyfikuje geograficzne skupiska, potwierdzając globalną polaryzację statusu społeczno-ekonomicznego uczniów.
 
@@ -739,7 +741,9 @@ Dodatkowo zidentyfikowano Chile jako **obserwację odstającą typu "Wysoki-Nisk
 
 Wyniki te dowodzą, że zróżnicowanie w edukacji ma silny wymiar przestrzenny, z "gorącymi plamami" w rozwiniętych regionach Europy i "zimnymi plamami" w krajach rozwijających się, co jest kluczową informacją dla dalszych analiz.
 
-# Estymacja klasycznego modelu OLS
+# Modelowanie ekonometryczne
+
+## Estymacja klasycznego modelu OLS
 
 Rozpoczynając analizę modelowania, w pierwszym kroku estymujemy klasyczny model regresji liniowej metodą najmniejszych kwadratów (OLS). Celem jest zbadanie siły i kierunku wpływu zmiennych objaśniających na status społeczno-ekonomiczny uczniów, na razie bez uwzględniania potencjalnych efektów przestrzennych.
 
@@ -805,7 +809,7 @@ Wyniki estymacji modelu OLS, zaprezentowane w tabelach, wskazują na następują
 
 **Wniosek końcowy:** Klasyczny model OLS potwierdza, że kluczowymi, pozytywnymi determinantami statusu społeczno-ekonomicznego uczniów są zasoby domowe, wykształcenie rodziców i ich status zawodowy, przy czym **najważniejszą rolę odgrywają warunki materialne i dostęp do zasobów w domu**.
 
-# Modelowanie przestrzenne (OLS, SAR, SEM) i porównanie modeli
+## Modelowanie przestrzenne (OLS, SAR, SEM) i porównanie modeli
 
 W poprzednich rozdziałach stwierdzono istotną globalną autokorelację przestrzenną dla wskaźnika ESCS. To sugeruje, że klasyczny model OLS, który ignoruje zależności geograficzne, może być modelem błędnie wyspecyfikowanym, a jego wyniki mogą być nie w pełni wiarygodne.
 
@@ -928,7 +932,7 @@ Co więcej, porównanie wartości AIC wykazało, że model OLS (AIC = -388.03) m
 
 Ostatecznie, modele przestrzenne nie wniosły dodatkowej wartości względem klasycznego OLS, a zależności między krajami w kontekście zmiennej **escs_trend** można wyjaśnić bez potrzeby uwzględniania efektów przestrzennych.
 
-# Model Durbina
+## Model Durbina
 
 Model Durbin (SDM) został wykorzystany jako rozszerzenie modelu SAR. Uwzględnia on nie tylko wpływ przestrzennego opóźnienia zmiennej zależnej, ale też sprawdza, czy wartości zmiennych objaśniających w sąsiednich krajach mają znaczenie dla poziomu **escs_trend**.
 
@@ -987,9 +991,87 @@ Porównanie kryterium informacyjnego AIC również nie przemawia na korzyść ba
 
 W związku z powyższym, nie znaleziono dowodów uzasadniających stosowanie złożonych modeli przestrzennych. Zgodnie z zasadą parsymonii, w tym przypadku preferowany jest prostszy model OLS, oparty wyłącznie na wewnętrznych charakterystykach danego kraju.
 
+# Ocena modelu
+
+Po estymacji trzech konkurencyjnych modeli – klasycznego modelu OLS, modelu z opóźnieniem przestrzennym (SAR) oraz modelu błędu przestrzennego (SEM) – przeprowadzono ich ocenę w celu wyboru tego, który najlepiej opisuje analizowane zjawisko.
+
+## Testy autokorelacji reszt
+
+Kluczowym kryterium oceny modelu OLS w kontekście danych przestrzennych jest sprawdzenie, czy w jego resztach nie pozostała żadna niewyjaśniona struktura przestrzenna. W tym celu wykonano test I Morana dla reszt modelu.
+
+```{r test-morana-reszt2, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# Wymagane biblioteki
+library(broom)
+library(kableExtra)
+library(dplyr)
+
+# Uwaga: Ten chunk zakłada, że obiekty 'ols_model' i 'lw' zostały stworzone
+# w poprzednim chunku z estymacją modeli.
+
+# Estymacja testu Morana dla reszt modelu OLS
+moran_reszt_test <- moran.test(residuals(ols_model), lw, zero.policy = TRUE)
+
+# Tworzenie sformatowanej tabeli z wynikami
+tidy(moran_reszt_test) %>%
+  select("Statystyka I Morana" = estimate1, "P-value" = p.value) %>%
+  kable(digits = 4, caption = "Test autokorelacji przestrzennej reszt z modelu OLS") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+```
+
+### **Interpretacja testu autokorelacji reszt**
+
+Kluczowym założeniem poprawności modelu OLS w analizie przestrzennej jest brak autokorelacji w jego resztach. W celu weryfikacji tego założenia, przeprowadzono test I Morana.
+
+Wyniki testu, przedstawione w tabeli, wskazują, że wartość **statystyki I Morana dla reszt wyniosła -0.051**, co jest wartością bardzo bliską zeru. Co najważniejsze, uzyskana **wartość p-value (0.695)** jest znacznie wyższa od standardowego progu istotności α=0.05.
+
+Oznacza to, że **nie ma podstaw do odrzucenia hipotezy zerowej** o braku autokorelacji przestrzennej. W resztach modelu OLS nie występuje żadna istotna statystycznie struktura przestrzenna. Wynik ten silnie sugeruje, że klasyczny model OLS może być wystarczający do opisu analizowanego zjawiska, a stosowanie bardziej skomplikowanych modeli przestrzennych (jak SAR czy SEM) może nie być konieczne.
+
+## Porównanie dopasowania modeli
+
+W celu porównania jakości dopasowania poszczególnych modeli do danych empirycznych, wykorzystano kryterium informacyjne Akaike (AIC). Zgodnie z tą metodą, model o niższej wartości AIC jest uznawany za lepiej dopasowany, uwzględniając kompromis między jakością dopasowania a liczbą estymowanych parametrów.
+
+```{r porownanie-aic2, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# Wymagane biblioteki
+library(kableExtra)
+library(tibble)
+
+# Uwaga: Ten chunk zakłada, że obiekty 'ols_model', 'sar_model' i 'sem_model'
+# zostały stworzone w poprzednim chunku.
+
+# Wywołanie AIC() i przekształcenie wyniku na ramkę danych
+tabela_aic <- AIC(ols_model, sar_model, sem_model) %>%
+  tibble::rownames_to_column("Model") # Dodanie nazw modeli jako kolumny
+
+# Stworzenie sformatowanej tabeli AIC
+kable(tabela_aic,
+      digits = 2,
+      caption = "Porównanie dopasowania modeli (kryterium AIC)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+```
+
+### Interpretacja porównania modeli (kryterium AIC)
+
+W celu wyboru najlepszego modelu spośród estymowanych wariantów (OLS, SAR, SEM), porównano ich wartości **kryterium informacyjnego Akaike (AIC)**. Kryterium to pozwala ocenić jakość modelu, uwzględniając kompromis między stopniem dopasowania do danych a jego złożonością (liczbą parametrów). Model o niższej wartości AIC jest uznawany za lepszy.
+
+Jak przedstawiono w tabeli, **klasyczny model OLS uzyskał najniższą wartość AIC, wynoszącą -388.03**. Modele przestrzenne SAR i SEM uzyskały wyższe (czyli gorsze) wartości, odpowiednio -386.08 i -386.32.
+
+Wniosek ten jest jednoznaczny: mimo że modele przestrzenne uwzględniają dodatkowe parametry, nie poprawiają one dopasowania do danych w stopniu, który uzasadniałby ich większą złożoność. Na podstawie tego kryterium, **model OLS jest preferowanym i najbardziej optymalnym wyborem** do opisu analizowanego zjawiska.
+
+## Ocena statystyczna i ekonomiczna oraz wybór finalnego modelu
+
+Biorąc pod uwagę przedstawione wyniki, jako finalny model wybrano **klasyczny model OLS**. Decyzja ta została poparta przez następujące argumenty:
+
+1.  **Brak autokorelacji przestrzennej reszt:** Test I Morana nie wykazał istotnej autokorelacji w resztach modelu OLS, co sugeruje, że model ten poprawnie wychwycił strukturę danych bez potrzeby uwzględniania efektów przestrzennych.
+
+2.  **Najlepsze dopasowanie (kryterium AIC):** Model OLS uzyskał najniższą wartość wskaźnika AIC spośród wszystkich porównywanych modeli, co świadczy o jego najlepszym dopasowaniu do danych.
+
+3.  **Brak istotności parametrów przestrzennych:** Zarówno w modelu SAR (parametr `rho`), jak i w modelu SEM (parametr `lambda`), współczynniki przestrzenne okazały się statystycznie nieistotne, co oznacza, że nie wniosły one istotnej informacji do modelu.
+
+Zgodnie z zasadą parsymonii (oszczędności), która nakazuje wybór najprostszego modelu dobrze opisującego rzeczywistość, model OLS jest w tym przypadku wyborem najbardziej uzasadnionym.
+
 # Wnioski i rekomendacje
 
-## 1. Kluczowe czynniki wpływające na **ESCS Trend**
+## Kluczowe czynniki wpływające na **ESCS Trend**
 
 +--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Zmienna (skala)                                        | Współczynnik (OLS) | Interpretacja                                                                                                                                                                                                            |
@@ -1003,7 +1085,7 @@ W związku z powyższym, nie znaleziono dowodów uzasadniających stosowanie zł
 
 *Model wyjaśnia aż 99,9 % zmienności ESCS (R² = 0,999), jednak tak wysoka wartość przy 68 obserwacjach sygnalizuje potencjalne problemy z kolinearnością i agregacją (średnie krajowe).*
 
-## 2. Znaczenie efektów przestrzennych
+## Znaczenie efektów przestrzennych
 
 +----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
 | Test / model                           | Statystyka | p-value   | Wniosek                                                                   |
@@ -1019,7 +1101,7 @@ W związku z powyższym, nie znaleziono dowodów uzasadniających stosowanie zł
 
 **W praktyce**: na poziomie uśrednionym dla państw efekty przestrzenne są znikome. Lokalna statystyka Moran’a pokazuje jedynie kilka niewielkich klastrów (np. **Brazylia** i **Szwecja**), ale nie przekłada się to na istotną strukturę w modelu regresji.
 
-## 3. Implikacje dla polityki publicznej i decyzji lokalnych
+## Implikacje dla polityki publicznej i decyzji lokalnych
 
 +---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | Obszar działania                                              | Rekomendacje                                                                                                                                                      |
@@ -1036,7 +1118,7 @@ W związku z powyższym, nie znaleziono dowodów uzasadniających stosowanie zł
 |                                                               | • Skupienie na wewnętrznym zróżnicowaniu (regiony, powiaty, szkoły), gdzie przestrzenne zależności mogą być silniejsze.                                           |
 +---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
-## 4. Ograniczenia danych i metod
+## Ograniczenia danych i metod
 
 +-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
 | Kategoria                   | Ograniczenie                                                                                                          | Konsekwencje / możliwe ulepszenia                                                                   |
