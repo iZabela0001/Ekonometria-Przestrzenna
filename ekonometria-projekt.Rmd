@@ -56,6 +56,7 @@ library(dlookr)
 library(readxl)
 library(spatialreg)
 library(standardize)
+library(broom)
 ```
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
@@ -416,7 +417,7 @@ W kolejnym kroku analizy wstępnej zbadano wzajemne relacje pomiędzy kluczowymi
 
 ```{r macierz-zaleznosci-kolorowa, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, fig.align='center'}
 
-install.packages("GGally")
+#install.packages("GGally")
 
 library(dplyr)
 library(GGally)
@@ -518,25 +519,27 @@ rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
 
 ```
 
-Średni ESCS Trend w krajach
+#### **Interpretacja poszczególnych map**
 
-Mapa przedstawia przestrzenne zróżnicowanie średniego trendowego indeksu statusu społeczno-ekonomicznego uczniów (ESCS) w poszczególnych krajach uczestniczących w badaniu PISA. Wartości dodatnie (w odcieniach żółci i pomarańczu) oznaczają kraje, w których uczniowie mają wyższy status społeczno-ekonomiczny niż średnia OECD. Z kolei wartości ujemne (w odcieniach fioletu i granatu) wskazują na niższy status społeczno-ekonomiczny. Mapa pokazuje wyraźne zróżnicowanie pomiędzy regionami — wyższe wartości dominują w Europie Północnej, Kanadzie i Australii, natomiast niższe widoczne są m.in. w Ameryce Południowej, Maroko, Arabia Saudyjska. Zróżnicowanie indeksu ESCS może odzwierciedlać poziom rozwoju społeczno-gospodarczego i dostęp uczniów do zasobów edukacyjnych. Może to mieć istotne znaczenie dla planowania polityk edukacyjnych i społecznych w danym kraju.
+-   **Średni ESCS Trend w krajach (zmienna zależna)** Kartogram dla zmiennej `escs_trend` ukazuje wyraźny podział globalny. Kraje o najwyższym średnim statusie społeczno-ekonomicznym uczniów to przede wszystkim państwa skandynawskie, Kanada, Australia, Nowa Zelandia oraz kraje Europy Zachodniej. Z drugiej strony, wyraźnie niższe wartości obserwuje się w krajach Ameryki Południowej (np. Brazylia, Peru, Kolumbia) oraz w niektórych krajach Azji i Bliskiego Wschodu (np. Indonezja, Katar, Jordania).
 
-Średni HISEI Trend w krajach
+-   **Średni HISEI Trend w krajach (status zawodowy rodziców)** Mapa rozkładu wskaźnika prestiżu zawodowego rodziców w dużej mierze pokrywa się z rozkładem ogólnego statusu ESCS. Potwierdza to, że regiony, w których rodzice statystycznie wykonują zawody o wyższym statusie, to te same, w których ogólny status społeczno-ekonomiczny uczniów jest wyższy.
 
-Mapa pokazuje średnią wartość trendowego indeksu HISEI w krajach objętych badaniem PISA. HISEI odzwierciedla najwyższy status zawodowy rodzica ucznia. Im wyższy wynik, tym bardziej prestiżowy zawód zajmuje przynajmniej jeden z rodziców. W krajach rozwiniętych, takich jak Kanada, Australia czy kraje skandynawskie, wartości HISEI są wyższe, co może świadczyć o wyższym prestiżu zawodowym rodziców uczniów. Niższe wartości w niektórych krajach Ameryki Południowej (np Brazylia), Europy Południowo-Wschodniej mogą wskazywać na ograniczony dostęp do zawodów o wyższym statusie społecznym.
+-   **Średni HOMEPOS Trend w krajach (zasoby domowe)** Podobny wzorzec przestrzenny jest widoczny dla wskaźnika zasobów edukacyjnych w domu. Regiony zamożniejsze, takie jak Europa Północna i Australia, charakteryzują się znacznie lepszym wyposażeniem domów uczniów w zasoby wspierające naukę (książki, komputery, dostęp do internetu) niż kraje rozwijające się.
 
-Średni HOMEPOS Trend w krajach
+-   **Średni PAREDINT Trend w krajach (wykształcenie rodziców)** Kartogram dla `paredint_trend` uzupełnia obraz, pokazując, że średni poziom wykształcenia rodziców jest najwyższy w tych samych, rozwiniętych gospodarczo regionach świata. To właśnie w tych krajach kapitał ludzki rodziców, mierzony latami nauki, jest największy.
 
-Wykres przedstawia średni poziom zasobów edukacyjnych w domach uczniów (indeks homepos_trend) w różnych krajach uczestniczących w badaniu PISA. Wysokie wartości (żółte i pomarańczowe odcienie) wskazują na lepsze wyposażenie domów w środki wspierające naukę, takie jak książki, biurka, komputery czy internet. Niskie wartości (fioletowe i niebieskie odcienie) sugerują niedobór tych zasobów. Można zauważyć wyraźne różnice między krajami rozwiniętymi a rozwijającymi się – np. wysoki poziom zasobów w krajach skandynawskich, Kanadzie i Australii vs. niski poziom w Ameryce Południowej i niektórych krajach Azji.
+#### **Wnioski porównawcze**
 
-Średni PAREDINT Trend w krajach Wykres ilustruje średni poziom wykształcenia rodziców uczniów (paredint_trend) w poszczególnych krajach, oparty na skali międzynarodowej (ISCED). Wyższe wartości (żółto-pomarańczowe odcienie) oznaczają wyższy przeciętny poziom wykształcenia rodziców, np. wykształcenie wyższe. Niższe wartości (fioletowe odcienie) sugerują, że dominujące jest wykształcenie średnie lub podstawowe. Wysoki poziom można zaobserwować m.in. w krajach Europy, Kanadzie, Australii, natomiast niski – w wielu państwach Ameryki Południowej, Arabii Saudyjskiej.
+Analiza porównawcza wszystkich czterech kartogramów prowadzi do jednoznacznego wniosku: **przestrzenne zróżnicowanie statusu społeczno-ekonomicznego uczniów nie jest przypadkowe, lecz odzwierciedla głęboko zakorzenione, globalne podziały rozwojowe.**
 
-Wnioski porównawcze Kraje rozwinięte (np. Skandynawia, Kanada, Australia, Holandia) wypadają konsekwentnie wysoko we wszystkich wskaźnikach – co świadczy o ich zrównoważonym profilu społeczno-edukacyjnym. Kraje Ameryki Południowej mają najniższe wartości we wszystkich trendach, co pokazuje strukturalne problemy społeczno-ekonomiczne przekładające się na nierówności edukacyjne. W niektórych krajach występuje rozbieżność między wskaźnikami, np. wysoki status zawodowy rodziców nie zawsze idzie w parze z wyposażeniem domów edukacyjnie (np. kraje Europy).
+Regiony takie jak **Skandynawia, Kanada, Australia i Europa Zachodnia** tworzą spójny klaster o wysokim kapitale ludzkim (wykształcenie), zawodowym (prestiż pracy) i materialnym (zasoby w domu). Z kolei kraje **Ameryki Południowej i części Azji** tworzą klaster o systematycznie niższych wartościach we wszystkich tych wymiarach. Ta silna spójność przestrzenna i wizualna identyfikacja klastrów "bogatych" i "biednych" regionów silnie sugeruje, że w dalszej analizie mogą pojawić się **istotne efekty autokorelacji przestrzennej**, które zbadamy za pomocą wskaźnika I Morana.
 
-ESCS dobrze oddaje ogólny poziom, ale analiza komponentów (HISEI, HOMEPOS, PAREDINT) pozwala lepiej zrozumieć źródła różnic między krajami.
+# Globalna autokorelacja przestrzenna: Współczynnik I Morana
 
-# Współczynnik Morana
+Współczynnik I Morana to podstawowy test sprawdzający, czy wartości analizowanej zmiennej są w przestrzeni rozmieszczone losowo, czy też tworzą geograficzne wzorce.
+
+Dodatnia wartość wskaźnika (`I > 0`) oznacza, że podobne wartości (np. wysoki status ESCS) grupują się, tworząc klastry. Wartość ujemna (`I < 0`) wskazuje na grupowanie się wartości niepodobnych (wzorzec szachownicy), a wartość bliska zeru sugeruje brak wzorca przestrzennego. Istotność statystyczna wyniku (p-value) potwierdza, czy zaobserwowany wzorzec jest dziełem przypadku.
 
 ```{r echo=FALSE, warning=FALSE}
 # wspolrzedne geograficzne
@@ -567,20 +570,58 @@ lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
 merged_data$escs_trend <- as.numeric(merged_data$escs_trend)
 #sum(is.na(merged_data$escs_trend))
 moran_test <- moran.test(merged_data$escs_trend, lw, zero.policy = TRUE)
-print(moran_test)
+
+# --- NOWA CZĘŚĆ: Tworzenie ładnej tabeli z wynikami ---
+
+# Używamy funkcji tidy() z pakietu broom, aby zamienić wyniki testu na zgrabną ramkę danych
+wyniki_tabelka <- tidy(moran_test)
+
+# Opcjonalnie: zmieniamy nazwy kolumn na bardziej czytelne po polsku
+wyniki_tabelka <- wyniki_tabelka %>%
+  select(statistic, p.value, estimate1, estimate2) %>%
+  rename(
+    "Statystyka I Morana" = estimate1,
+    "Wartość oczekiwana" = estimate2,
+    "Statystyka testowa (z)" = statistic,
+    "P-value" = p.value
+  )
+
+# Tworzymy tabelę w HTML za pomocą kable() i kable_styling()
+kable(wyniki_tabelka, digits = 6, caption = "Wyniki testu globalnej autokorelacji I Morana") %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+
 ```
 
-Wartość statystyki Moran's I = 0.326 Kraje o podobnych wartościach escs_trend (statusie społeczno-ekonomicznym uczniów) grupują się blisko siebie. Np: Jeśli Polska ma wysokie escs_trend, to jej sąsiedzi (Niemcy, Czechy) też prawdopodobnie mają wysokie wartości.
+### **Interpretacja wyników testu I Morana**
 
-p-value = 4.645e-05 (\<\< 0.05) Wynik jest wysoce istotny statystycznie – odrzucamy hipotezę zerową o braku autokorelacji przestrzennej. Możemy zatem rozważać modele przestrzenne.
+Wyniki testu jednoznacznie wskazują na istnienie globalnej autokorelacji przestrzennej. Obliczona wartość **statystyki I Morana wyniosła 0.326**, co jest wartością dodatnią, świadczącą o tendencji do grupowania się podobnych wartości w przestrzeni. Oznacza to, że kraje o podobnym średnim statusie społeczno-ekonomicznym uczniów (`escs_trend`) mają tendencję do występowania blisko siebie, tworząc regionalne skupiska.
 
-Standard deviate = 3.9084 Wartość statystyki jest prawie 4 odchylenia standardowe powyżej oczekiwań (Expectation = -0.015), co potwierdza silny wzorzec przestrzenny.
+Zaobserwowany wzorzec jest **wysoce istotny statystycznie**, o czym świadczy p-value na poziomie `4.6e-05`, które jest znacznie niższe od standardowego progu istotności α=0.05. W związku z tym, **odrzucamy hipotezę zerową** o losowym rozkładzie przestrzennym analizowanego zjawiska.
 
-Status społeczno-ekonomiczny uczniów nie jest rozłożony losowo – istnieją wyraźne regionalne wzorce.
+Stwierdzenie istnienia globalnej autokorelacji uzasadnia dalsze, bardziej szczegółowe badanie w celu zidentyfikowania lokalizacji konkretnych klastrów za pomocą lokalnych statystyk (LISA).
 
-Możemy zobaczy czy klastry pokrywają się z podziałem na kraje OECD np zy kraje OECD mają wyższe escs_trend i grupują się razem.obliczenie lokalnego moran'a (LISA)
+# Lokalne wskaźniki autokorelacji przestrzennej (LISA)
 
-# Wspolczynnik LISA
+Test I Morana potwierdził istnienie globalnej autokorelacji przestrzennej, co oznacza, że dane nie są rozmieszczone losowo. Jednakże, jako wskaźnik globalny, nie informuje on, *w których konkretnie miejscach* występują skupiska.
+
+Aby zidentyfikować lokalizację tych wzorców, przechodzimy do analizy **Lokalnych Wskaźników Autokorelacji Przestrzennej (LISA)**. Analiza ta "rozkłada" globalną statystykę na poszczególne jednostki (w naszym przypadku – kraje), obliczając dla każdej z nich lokalną miarę podobieństwa do jej sąsiadów.
+
+Celem analizy LISA jest zidentyfikowanie statystycznie istotnych klastrów przestrzennych oraz obserwacji odstających. Pozwala to na sklasyfikowanie każdego kraju do jednej z czterech kategorii:
+
+-   **Wysoki-Wysoki (High-High):** Kraj o wysokiej wartości otoczony przez sąsiadów o również wysokich wartościach (tzw. gorąca plama - *hot spot*).
+
+-   **Niski-Niski (Low-Low):** Kraj o niskiej wartości otoczony przez sąsiadów o niskich wartościach (tzw. zimna plama - *cold spot*).
+
+-   **Wysoki-Niski (High-Low):** Kraj o wysokiej wartości otoczony przez sąsiadów o niskich wartościach (przestrzenna obserwacja odstająca).
+
+-   **Niski-Wysoki (Low-High):** Kraj o niskiej wartości otoczony przez sąsiadów o wysokich wartościach (przestrzenna obserwacja odstająca).
+
+W tej części projektu zwizualizujemy wyniki analizy LISA na mapie, aby wskazać konkretne regiony świata tworzące klastry.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -632,6 +673,87 @@ ggplot(data = map_data) +
 ```
 
 Czerwonym kolorem na mapie oznaczono kraje, dla których stwierdzono istotną wartość lokalnej statystyki Morana oznacza to, że kraje te otoczone są krajami o podobnej wartości analizowanego zjawiska
+
+```{r analiza-lisa, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+# Obliczenie lokalnych statystyk Morana
+local_moran <- localmoran(merged_data$escs_trend, lw, zero.policy = TRUE)
+
+# --- DODAJEMY BRAKUJĄCY KOD DO TWORZENIA KOLUMNY 'oecd' ---
+oecd_iso3 <- c(
+  "AUS", "AUT", "BEL", "CAN", "CHL", "COL", "CZE", "DNK", "EST", "FIN", 
+  "FRA", "DEU", "GRC", "HUN", "ISL", "IRL", "ISR", "ITA", "JPN", "KOR", 
+  "LVA", "LTU", "LUX", "MEX", "NLD", "NZL", "NOR", "POL", "PRT", "SVK", 
+  "SVN", "ESP", "SWE", "CHE", "TUR", "GBR", "USA"
+)
+merged_data$oecd <- ifelse(merged_data$cnt %in% oecd_iso3, "OECD", "non-OECD")
+# ----------------------------------------------------------------
+
+# --- Klasyfikacja klastrów (bez zmian) ---
+merged_data$std_escs <- scale(merged_data$escs_trend)
+merged_data$lag_std_escs <- lag.listw(lw, merged_data$std_escs, zero.policy = TRUE)
+merged_data$p_value <- local_moran[, 5]
+
+merged_data <- merged_data %>%
+  mutate(cluster_type = case_when(
+    p_value < 0.05 & std_escs > 0 & lag_std_escs > 0   ~ "Wysoki-Wysoki (Hot Spot)",
+    p_value < 0.05 & std_escs < 0 & lag_std_escs < 0   ~ "Niski-Niski (Cold Spot)",
+    p_value < 0.05 & std_escs > 0 & lag_std_escs < 0   ~ "Wysoki-Niski (Outlier)",
+    p_value < 0.05 & std_escs < 0 & lag_std_escs > 0   ~ "Niski-Wysoki (Outlier)",
+    TRUE                                              ~ "Niestotny statystycznie"
+  ))
+
+# --- Tworzenie tabeli (bez zmian, teraz zadziała) ---
+tabela_lisa_long <- merged_data %>%
+  count(oecd, cluster_type, name = "Liczba") %>%
+  filter(!is.na(cluster_type) & !is.na(oecd))
+
+tabela_lisa <- pivot_wider(
+  tabela_lisa_long,
+  names_from = cluster_type, 
+  values_from = Liczba, 
+  values_fill = 0
+)
+
+kable(tabela_lisa, caption = "Liczba krajów w klastrach LISA według przynależności do OECD") %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+```
+
+```{r mapa-lisa, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=10, fig.align='center'}
+
+# Połączenie wyników
+mapa_lisa_dane <- left_join(mapa_swiat, merged_data, by = c("iso_a3" = "cnt"))
+
+# Kolory klastrów
+kolory_klastrow <- c(
+  "Wysoki-Wysoki (Hot Spot)" = "#FF0000",  # Czerwony
+  "Niski-Niski (Cold Spot)" = "#0000FF",   # Niebieski
+  "Wysoki-Niski (Outlier)" = "#FFBBBB",    # Jasnoczerwony
+  "Niski-Wysoki (Outlier)" = "#AAAAFF",    # Jasnoniebieski
+  "Niestotny statystycznie" = "#DDDDDD"    # Szary
+)
+
+# Mapa
+ggplot(data = mapa_lisa_dane) +
+  geom_sf(aes(fill = cluster_type), color = "white", size = 0.1) +
+  scale_fill_manual(
+    values = kolory_klastrow,
+    name = "Typ klastra LISA",
+    na.value = "grey95" # Kolor dla krajów bez danych
+  ) +
+  labs(
+    title = "Mapa klastrów LISA dla wskaźnika ESCS Trend",
+    subtitle = "Identyfikacja 'gorących' i 'zimnych' plam oraz obserwacji odstających"
+  ) +
+  theme_void() + # Używamy minimalistycznego tła dla mapy
+  theme(legend.position = "bottom")
+
+```
 
 # Estymacja klasycznego modelu OLS
 
