@@ -1,34 +1,38 @@
 ---
-title: "Ekonometria - projekt"
+title: "Analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego uczniów (PISA)"
 author: "Izabela Reszka, Klaudia Woźniak, Piotr Wiśniewski"
 date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output:
   html_document:
-    theme: cerulean     
-    highlight: tango     
-    toc: true            
-    toc_depth: 2
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3 # Zwiększyłem głębokość spisu treści
+    toc_float: true # Pływający spis treści w HTML
     number_sections: true
-    code_folding: hide   
+    code_folding: hide
   pdf_document:
     latex_engine: xelatex
     number_sections: true
     toc: true
     toc_depth: 2
-    keep_tex: true
     fig_caption: true
-    fig_height: 5
-    fig_width: 7
-    includes:
-      in_header: header.tex
-fontsize: 11pt
-mainfont: Palatino
-geometry: margin=2.5cm
+# Uwaga: poniższe opcje wymagają zaawansowanej konfiguracji LaTeX
+# includes:
+#   in_header: header.tex
+# fontsize: 11pt
+# mainfont: Palatino
+# geometry: margin=2.5cm
 ---
 
-
 ```{r setup, include=FALSE, echo=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Globalne opcje dla wszystkich chunków
+knitr::opts_chunk$set(
+  echo = FALSE,       # Ukryj kod domyślnie
+  message = FALSE,    # Ukryj komunikaty
+  warning = FALSE,    # Ukryj ostrzeżenia
+  fig.align = 'center' # Wyśrodkuj wykresy
+)
 ```
 
 ```{r Biblioteki, message=FALSE, warning=FALSE}
@@ -53,8 +57,6 @@ library(readxl)
 library(spatialreg)
 library(standardize)
 ```
-
-
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
 # Ładowanie danych
@@ -134,16 +136,36 @@ Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczn
 
 ## Braki danych
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
+```{r plot-missing-summary, echo=FALSE, message=FALSE, warning=FALSE}
+# Podsumowanie braków danych
 missing_summary <- miss_var_summary(dane)
 
-ggplot(missing_summary, aes(x = reorder(variable, -pct_miss), y = pct_miss)) +
-  geom_bar(stat = "identity", fill = "plum2") +
-  coord_flip() +
-  labs(title = "Procent brakujących wartości w kolumnach",
-       x = "Zmienne",
-       y = "Procent braków (%)") +
-  theme_minimal()
+# TYLKO zmienne z brakami
+missing_summary <- miss_var_summary(dane)
+missing_summary_filtered <- missing_summary %>% 
+  filter(pct_miss > 0)
+
+# Tworzymy ulepszony wykres z poprawką
+ggplot(missing_summary_filtered, aes(x = pct_miss, y = reorder(variable, pct_miss))) +
+  geom_col(fill = "plum3", width = 0.8) +
+  
+  # === TUTAJ JEST POPRAWKA ===
+  # Dodajemy as.numeric(), aby R potraktował pct_miss jako zwykłą liczbę
+  geom_text(aes(label = paste0(round(as.numeric(pct_miss), 1), "%")), 
+            hjust = -0.2, 
+            size = 3.5, 
+            color = "gray20") +
+  
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Procent brakujących wartości w kolumnach",
+    subtitle = "Wyświetlono tylko zmienne z brakującymi danymi.",
+    x = "Procent braków (%)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank())
+
 ```
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
@@ -188,6 +210,7 @@ kable(
     full_width = FALSE,
     bootstrap_options = c("striped", "hover", "condensed")
   )
+
 ```
 
 Wykres słupkowy przedstawia procent brakujących danych dla każdej zmiennej w zbiorze. Największy odsetek braków występuje w zmiennej:
@@ -311,119 +334,159 @@ Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos
 
 # Wykresy: histogramy, wykresy rozrzutu, gęstości
 
-## Wykresy gęstości
+## Histogramy z wykresami gęstości
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
-ggplot(dane, aes(x = homepos_trend)) +
-  geom_density(fill = "orange", alpha = 0.5) +
-  ggtitle("Gęstość homepos_trend")
+```{r Histogram_gestosc, message=FALSE, warning=FALSE}
 
-ggplot(dane, aes(x = hisei_trend)) +
-  geom_density(fill = "plum", alpha = 0.5) +
-  ggtitle("Gęstość hisei_trend")
-
-ggplot(dane, aes(x = escs_trend)) +
-  geom_density(fill = "lightblue", alpha = 0.5) +
-  ggtitle("Gęstość escs_trend")
-
-ggplot(dane, aes(x = paredint_trend)) +
-  geom_density(fill = "salmon", alpha = 0.5) +
-  ggtitle("Gęstość paredint_trend")
-
-
-```
-
-## Histogramy
-
-
-```{r, echo=FALSE, results='asis', eval=TRUE}
-
-#Może nałożymy gęstość (pkt wyżej) na histogramy ????
 dane_long <- dane2 %>%
-  pivot_longer(cols = c(homepos_trend, escs_trend, hisei_trend, paredint_trend),
-               names_to = "zmienna", values_to = "wartość")
+  pivot_longer(cols = everything(), # Zbieramy wszystkie kolumny
+               names_to = "zmienna",
+               values_to = "wartość")
+
+# Tworzenie połączonego wykresu
 ggplot(dane_long, aes(x = wartość)) +
-  geom_histogram(bins = 30, fill = "peachpuff", color = "black") +
-  facet_wrap(~ zmienna, scales = "free") +
-  labs(title = "Histogramy wybranych zmiennych",
-       x = "Wartość",
-       y = "Liczba obserwacji") +
-  theme_minimal()
+  # Warstwa histogramu: kluczowe jest ustawienie osi Y na gęstość (aes(y = ..density..))
+  geom_histogram(
+    aes(y = ..density..),
+    bins = 30,
+    fill = "skyblue",
+    color = "white",
+    alpha = 0.7
+  ) +
+  # Warstwa krzywej gęstości
+  geom_density(
+    color = "darkred",
+    linewidth = 1.2 # Używamy linewidth zamiast size dla nowoczesnego ggplot2
+  ) +
+  # Podział na panele dla każdej zmiennej
+  facet_wrap( ~ zmienna, scales = "free") +
+  # Etykiety i tytuły
+  labs(
+    title = "Histogramy i krzywe gęstości dla kluczowych zmiennych",
+    subtitle = "Porównanie rozkładu z wygładzonym oszacowaniem gęstości",
+    x = "Wartość zmiennej",
+    y = "Gęstość"
+  ) +
+  # Estetyczny motyw
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_text(face = "bold")) # Pogrubienie nazw zmiennych
+
 
 ```
 
-Histogram zmiennej escs_trend, czyli ogólnego wskaźnika statusu społeczno-ekonomicznego uczniów, przedstawia rozkład zbliżony do normalnego, z lekką skośnością. Większość obserwacji koncentruje się wokół wartości bliskich zeru, co sugeruje, że przeważają uczniowie o przeciętnym statusie społeczno-ekonomicznym. Ekstremalnie niskie lub wysokie wartości są stosunkowo rzadkie, co może świadczyć o względnym wyrównaniu warunków społecznych wśród badanych uczniów.
+### **Analiza rozkładów kluczowych zmiennych społeczno-ekonomicznych**
 
-Zmienna hisei_trend, odzwierciedlająca status zawodowy rodziców, ma wielomodalny rozkład (rozkład, który ma więcej niż jedno maksimum (szczyt) w wykresie), co oznacza obecność kilku wyraźnych szczytów. Wskazuje to na istnienie kilku dominujących grup zawodowych, takich jak np. robotnicy, specjaliści czy menedżerowie. Takie zróżnicowanie sugeruje dużą różnorodność środowisk zawodowych, z jakich pochodzą uczniowie, oraz możliwe wpływy struktury rynku pracy w poszczególnych krajach.
+Przedstawione wykresy, łączące histogramy z wygładzonymi krzywymi gęstości, dostarczają szczegółowego wglądu w charakterystykę rozkładów czterech kluczowych zmiennych użytych w analizie. Zrozumienie tych rozkładów jest fundamentalnym krokiem przed przystąpieniem do modelowania ekonometrycznego, ponieważ pozwala zidentyfikować potencjalne problemy, takie jak skośność, wielomodalność czy nietypowe obserwacje, które mogą wpływać na wyniki estymacji.
 
-Rozkład zmiennej homepos_trend, opisującej zasoby edukacyjne w domu (np. liczba książek, komputery, biurko), również zbliżony jest do rozkładu normalnego, z lekkim przechyleniem. Najwięcej uczniów ma dostęp do umiarkowanych lub przeciętnych zasobów edukacyjnych, natomiast skrajnie niskie zasoby występują rzadziej. Wskazuje to na pewien stopień wyrównania dostępu do podstawowych narzędzi wspierających edukację.
+#### **Interpretacja poszczególnych zmiennych:**
 
-W przypadku zmiennej paredint_trend, mierzącej liczbę lat nauki rodziców (czyli ich poziom wykształcenia), widoczny jest dyskretny rozkład ze szczytami w okolicach 6, 9, 12 i 15 lat edukacji. Oznacza to, że wielu rodziców ukończyło typowe poziomy nauczania, odpowiadające podstawowemu, średniemu oraz wyższemu wykształceniu. Najwięcej uczniów pochodzi z rodzin, w których rodzice mają co najmniej wykształcenie średnie, co może mieć znaczenie dla szans edukacyjnych tych uczniów.
+-   **escs_trend (Indeks statusu społeczno-ekonomicznego)**
+
+    -   **Obserwacja statystyczna:** Rozkład tej zmiennej jest jednomodalny i najbardziej zbliżony do rozkładu normalnego spośród analizowanych. Jest jednak widoczna delikatna **lewostronna asymetria (ujemna skośność)**, co potwierdza krzywa gęstości, która opada łagodniej po lewej stronie wartości szczytowej.
+
+    -   **Wniosek analityczny:** Dominanta rozkładu znajduje się nieznacznie powyżej zera, jednak obecność dłuższego lewego "ogona" sugeruje, że w próbie istnieje wyraźna grupa uczniów o statusie istotnie niższym od przeciętnej, co "przeciąga" średnią w dół. Ta niewielka asymetria generalnie nie powinna stanowić poważnego problemu dla standardowych modeli regresyjnych, ale warto będzie ją zweryfikować podczas analizy reszt modelu.
+
+-   **hisei_trend (Indeks statusu zawodowego rodziców)**
+
+    -   **Obserwacja statystyczna:** Rozkład tej zmiennej jest jawnie **wielomodalny**, co oznacza, że posiada kilka wyraźnych maksimów lokalnych. Krzywa gęstości doskonale to uwypukla, wskazując na co najmniej trzy dominujące "grupowania" wartości.
+
+    -   **Wniosek analityczny:** Taki kształt rozkładu jest typowy dla zmiennych opisujących strukturę społeczną lub rynek pracy. Poszczególne mody mogą odpowiadać dominującym grupom zawodowym o różnym prestiżu, np. pracownikom fizycznym, specjalistom średniego szczebla i kadrze zarządzającej. Z perspektywy modelowania, traktowanie tej zmiennej jako liniowego predyktora może być uproszczeniem. Lepsze rezultaty mogłoby przynieść przekształcenie jej w zmienną kategorialną (np. na podstawie kwantyli) w celu uchwycenia nieliniowego wpływu statusu zawodowego.
+
+-   **homepos_trend (Indeks zasobów domowych)**
+
+```         
+-   **Obserwacja statystyczna:** Rozkład jest silnie skoncentrowany wokół wartości centralnej, co czyni go **wysokim i smukłym (rozkład leptokurtyczny)**. Podobnie jak w przypadku `escs_trend`, występuje tu niewielka asymetria lewostronna.
+
+-   **Wniosek analityczny:** Niska wariancja i wysoka koncentracja wskazują, że większość badanych uczniów dysponuje podobnym, przeciętnym poziomem zasobów edukacyjnych w domu. Istnienie lewego ogona ponownie sygnalizuje obecność grupy w znacznie gorszej sytuacji materialnej.
+```
+
+-   **paredint_trend (Indeks wykształcenia rodziców)**
+
+    -   **Obserwacja statystyczna:** Wykres jednoznacznie pokazuje, że jest to zmienna o charakterze **dyskretnym**, a nie ciągłym. Obserwacje grupują się wokół kilku konkretnych wartości, tworząc wyraźne, oddzielone od siebie słupki. Główne piki widoczne są w okolicach wartości 12 i 16.
+
+    -   **Wniosek analityczny:** Rozkład ten odzwierciedla progi edukacyjne w systemach oświaty (np. ukończenie szkoły średniej - ok. 12 lat nauki, oraz studiów wyższych - ok. 16 lat). Krzywa gęstości, mimo próby wygładzenia, dobrze oddaje te mody. W analizie regresji zmienna ta powinna być traktowana z ostrożnością. Zamiast jako zmienną ciągłą, można ją z powodzeniem zaimplementować jako zbiór zmiennych zero-jedynkowych (fikcyjnych), gdzie każda z nich odpowiadałaby osiągnięciu konkretnego progu edukacyjnego. Takie podejście pozwoliłoby precyzyjniej zmierzyć nieliniowy wpływ wykształcenia rodziców.
+
+#### **Podsumowanie**
+
+Analiza wizualna rozkładów dostarczyła kluczowych informacji: zmienne `escs_trend` i `homepos_trend` mają rozkłady zbliżone do normalnego, co dobrze rokuje dla modelowania. Zmienna `hisei_trend` jest wielomodalna, a `paredint_trend` ma charakter dyskretny. Te dwie ostatnie mogą wymagać specjalnego potraktowania w modelu (np. kategoryzacji), aby w pełni wykorzystać ich potencjał informacyjny i uniknąć błędnej specyfikacji modelu.
 
 ## Wykresy rozrzutu
 
+W kolejnym kroku analizy wstępnej zbadano wzajemne relacje pomiędzy kluczowymi zmiennymi ilościowymi. Poniższe wykresy rozrzutu pozwalają na wizualną ocenę siły, kierunku oraz potencjalnej formy zależności, co jest kluczowe dla późniejszej specyfikacji modelu ekonometrycznego.
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
+```{r macierz-zaleznosci-kolorowa, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, fig.align='center'}
 
-#TEN KOD ZA DŁUGO SIĘ LADUJE --- TRZEBA GO ZOPTYMALIZOWAĆ
-par(mfrow = c(3, 2))
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
+install.packages("GGally")
 
-ggplot(dane, aes(x = homepos_trend, y = escs_trend)) +
-  geom_point(color = "mediumvioletred", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs Escs_trend",
-       x = "Homepos_trend",
-       y = "Escs_trend") +
-  theme_minimal()
+library(dplyr)
+library(GGally)
 
-ggplot(dane, aes(x = homepos_trend, y = hisei_trend)) +
-  geom_point(color = "orange", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs hisei_trend",
-       x = "Homepos_trend",
-       y = "hisei_trend") +
-  theme_minimal()
+#Przygotowanie danych z grupami
+dane_do_wykresu_grupowane <- dane %>%
+  select(escs_trend, hisei_trend, homepos_trend, paredint_trend) %>%
+  sample_n(size = 10000, replace = FALSE) %>%
+  mutate(
+    grupa_escs = cut(
+      escs_trend,
+      breaks = quantile(escs_trend, probs = c(0, 0.33, 0.66, 1), na.rm = TRUE),
+      labels = c("Niski Status", "Średni Status", "Wysoki Status"),
+      include.lowest = TRUE
+    )
+  )
 
-ggplot(dane, aes(x = homepos_trend, y = paredint_trend)) +
-  geom_point(color = "lightgreen", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs paredint_trend",
-       x = "Homepos_trend",
-       y = "paredint_trend") +
-  theme_minimal()
+#Zdefiniowanie prostej funkcji pomocniczej
+ogolna_korelacja <- function(data, mapping, ...) {
+  mapping$colour <- NULL
+  ggally_cor(data, mapping, ...)
+}
 
-##############################################################################################################################
-
-
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-
-ggplot(dane, aes(x = escs_trend, y = hisei_trend)) +
-  geom_point(color = "yellow", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: escs_trend vs hisei_trend",
-       x = "escs_trend",
-       y = "hisei_trend") +
-  theme_minimal()
-
-ggplot(dane, aes(x = escs_trend, y = paredint_trend)) +
-  geom_point(color = "slateblue1", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: escs_trend vs paredint_trend",
-       x = "escs_trend",
-       y = "paredint_trend") +
-  theme_minimal()
-
-##############################################################################################################################
-
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-
-ggplot(dane, aes(x = hisei_trend, y = paredint_trend)) +
-  geom_point(color = "paleturquoise2", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: hisei_trend vs paredint_trend",
-       x = "hisei_trend",
-       y = "paredint_trend") +
-  theme_minimal()
-
-
+#Wygenerowanie macierzy z zastosowaniem naszej funkcji
+ggpairs(
+  dane_do_wykresu_grupowane,
+  mapping = aes(color = grupa_escs, alpha = 0.5), 
+  title = "Macierz zależności z podziałem na grupy statusu społ.-ekon.",
+  columns = 1:4,
+  
+  # Konfiguracja dolnego trójkąta
+  lower = list(
+    continuous = wrap("points", size = 0.5)
+  ),
+  
+  # Konfiguracja przekątnej
+  diag = list(
+    continuous = wrap("densityDiag", alpha = 0.5)
+  ),
+  
+  # Ogólną korelacja
+  upper = list(
+    continuous = ogolna_korelacja
+  ),
+  
+  legend = 1
+) +
+scale_color_manual(values = c("Niski Status" = "#E41A1C", "Średni Status" = "#377EB8", "Wysoki Status" = "#4DAF4A")) +
+scale_fill_manual(values = c("Niski Status" = "#E41A1C", "Średni Status" = "#377EB8", "Wysoki Status" = "#4DAF4A")) +
+theme_light() +
+theme(
+  plot.title = element_text(size = 16, face = "bold"),
+  strip.text = element_text(size = 10, face = "bold"),
+  legend.position = "bottom"
+)
 ```
 
+Zaprezentowana macierz wykresów to zwięzłe, wielowymiarowe podsumowanie danych. Zastosowanie kolorów dla grup statusu społeczno-ekonomicznego (`Niski`, `Średni`, `Wysoki`) pozwala na szybką identyfikację kluczowych wzorców i zależności.
+
+-   **Silne zależności i systematyczne różnice:** Potwierdzono bardzo silne, dodatnie korelacje (współczynniki od 0.77 do 0.82) między ogólnym wskaźnikiem `escs_trend` a jego składowymi. Rozkłady gęstości (na przekątnej) oraz wykresy rozrzutu (dolny trójkąt) jednoznacznie pokazują, że grupy o wyższym statusie systematycznie osiągają wyższe wartości we wszystkich analizowanych wymiarach: od wykształcenia rodziców (`paredint_trend`) po zasoby domowe (`homepos_trend`).
+
+-   **Interakcje między zmiennymi:** Wizualizacja ujawnia istotne interakcje. Na przykład, wśród uczniów, których rodzice legitymują się wykształceniem wyższym, praktycznie nie występują osoby z grupy o "Niskim Statusie", co wskazuje na silne powiązanie kapitału edukacyjnego z ogólnym statusem.
+
+-   **Implikacje dla modelowania (współliniowość):** Najważniejszy wniosek dla dalszej analizy to sygnał **potencjalnej współliniowości**. Umiarkowane korelacje między samymi zmiennymi objaśniającymi (0.43-0.50) sugerują, że ich wpływ na `escs_trend` może się częściowo pokrywać. Wymaga to ostrożności przy interpretacji indywidualnych współczynników w modelu regresji i uzasadnia późniejsze sprawdzenie wskaźnika VIF.
+
+Podsumowując, wykres efektywnie ilustruje złożoną strukturę danych i dostarcza kluczowych wskazówek dla etapu modelowania ekonometrycznego.
+
 # Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
+
+W celu zbadania przestrzennego zróżnicowania analizowanych zjawisk, przygotowano serię kartogramów. Każda mapa przedstawia średnią wartość wybranej zmiennej na poziomie kraju, co pozwala na identyfikację globalnych wzorców i regionalnych skupisk. Zastosowana skala barw (`plasma`) przypisuje wyższym wartościom jaśniejsze kolory (żółty), a niższym – ciemniejsze (fioletowy/granatowy). Kraje bez dostępnych danych oznaczono kolorem szarym.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 dane_kraje <- dane %>%
@@ -473,7 +536,7 @@ Wnioski porównawcze Kraje rozwinięte (np. Skandynawia, Kanada, Australia, Hola
 
 ESCS dobrze oddaje ogólny poziom, ale analiza komponentów (HISEI, HOMEPOS, PAREDINT) pozwala lepiej zrozumieć źródła różnic między krajami.
 
-# Wspolczynnik Moran
+# Współczynnik Morana
 
 ```{r echo=FALSE, warning=FALSE}
 # wspolrzedne geograficzne
@@ -719,31 +782,31 @@ Nie znaleziono zatem dowodów na to, że czynniki przestrzenne wpływają na poz
 
 ## 1. Kluczowe czynniki wpływające na **ESCS Trend**
 
-+--------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Zmienna (skala)                                        | Współczynnik (OLS)   | Interpretacja                                                                                                                                                                                                            |
-+========================================================+======================+==========================================================================================================================================================================================================================+
-| **homepos_trend** (≈ –1 ÷ +3)                          | +0.79                | Najsilniejszy efekt: wzrost o 1 pkt w indeksie zasobów domowych podnosi średni ESCS o \~0,8 pkt. To sugeruje, że wyposażenie domu – komputery, książki, miejsce do nauki – jest kluczowym czynnikiem wyrównywania szans. |
-+--------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **paredint_trend** (lata ukończonej edukacji rodziców) | +0.17                | Wyższe wykształcenie rodziców (szczególnie matki) przekłada się na lepszy status społeczno-ekonomiczny uczniów, choć słabiej niż zasoby materialne.                                                                      |
-+--------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| **hisei_trend** (status zawodowy rodziców)             | +0.02                | Sam status zawodowy ma istotny, ale najmniejszy wpływ w porównaniu z innymi zmiennymi – w dużej mierze działa pośrednio poprzez dochody i poziom wykształcenia.                                                          |
-+--------------------------------------------------------+----------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Zmienna (skala)                                        | Współczynnik (OLS) | Interpretacja                                                                                                                                                                                                            |
++========================================================+====================+==========================================================================================================================================================================================================================+
+| **homepos_trend** (≈ –1 ÷ +3)                          | +0.79              | Najsilniejszy efekt: wzrost o 1 pkt w indeksie zasobów domowych podnosi średni ESCS o \~0,8 pkt. To sugeruje, że wyposażenie domu – komputery, książki, miejsce do nauki – jest kluczowym czynnikiem wyrównywania szans. |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **paredint_trend** (lata ukończonej edukacji rodziców) | +0.17              | Wyższe wykształcenie rodziców (szczególnie matki) przekłada się na lepszy status społeczno-ekonomiczny uczniów, choć słabiej niż zasoby materialne.                                                                      |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **hisei_trend** (status zawodowy rodziców)             | +0.02              | Sam status zawodowy ma istotny, ale najmniejszy wpływ w porównaniu z innymi zmiennymi – w dużej mierze działa pośrednio poprzez dochody i poziom wykształcenia.                                                          |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 
 *Model wyjaśnia aż 99,9 % zmienności ESCS (R² = 0,999), jednak tak wysoka wartość przy 68 obserwacjach sygnalizuje potencjalne problemy z kolinearnością i agregacją (średnie krajowe).*
 
 ## 2. Znaczenie efektów przestrzennych
 
-+----------------------------------------+----------------+----------------+---------------------------------------------------------------------------+
-| Test / model                           | Statystyka     | p-value        | Wniosek                                                                   |
-+========================================+================+================+===========================================================================+
-| **Global Moran’s I** dla reszt OLS     | –0.05          | 0.69           | Brak globalnej autokorelacji przestrzennej – reszty zachowują się losowo. |
-+----------------------------------------+----------------+----------------+---------------------------------------------------------------------------+
-| **SAR (lag)** ρ                        | –0.001         | 0.83           | Nieistotny efekt zależności sąsiedzkiej między poziomami ESCS.            |
-+----------------------------------------+----------------+----------------+---------------------------------------------------------------------------+
-| **SEM (error)** λ                      | –0.083         | 0.59           | Brak istotnego błędu przestrzennego.                                      |
-+----------------------------------------+----------------+----------------+---------------------------------------------------------------------------+
-| **Mixed SAR** – parametry lagowanych X | nieistotne     | \>0.39         | Brak przestrzennych spill-over dla zmiennych objaśniających.              |
-+----------------------------------------+----------------+----------------+---------------------------------------------------------------------------+
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| Test / model                           | Statystyka | p-value   | Wniosek                                                                   |
++========================================+============+===========+===========================================================================+
+| **Global Moran’s I** dla reszt OLS     | –0.05      | 0.69      | Brak globalnej autokorelacji przestrzennej – reszty zachowują się losowo. |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **SAR (lag)** ρ                        | –0.001     | 0.83      | Nieistotny efekt zależności sąsiedzkiej między poziomami ESCS.            |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **SEM (error)** λ                      | –0.083     | 0.59      | Brak istotnego błędu przestrzennego.                                      |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **Mixed SAR** – parametry lagowanych X | nieistotne | \>0.39    | Brak przestrzennych spill-over dla zmiennych objaśniających.              |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
 
 **W praktyce**: na poziomie uśrednionym dla państw efekty przestrzenne są znikome. Lokalna statystyka Moran’a pokazuje jedynie kilka niewielkich klastrów (np. **Brazylia** i **Szwecja**), ale nie przekłada się to na istotną strukturę w modelu regresji.
 
