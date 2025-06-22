@@ -277,11 +277,30 @@ dane$homepos_trend <- as.numeric(dane$homepos_trend)
 ```
 
 ```{r, fig.height=10, fig.width=10, echo=FALSE, eval=TRUE, results='asis'}
-par(mfrow = c(2, 2))
-boxplot(dane$hisei_trend, main = "hisei_trend", col = "skyblue")
-boxplot(dane$paredint_trend, main = "paredint_trend", col = "plum")
-boxplot(dane$escs_trend, main = "escs_trend", col = "peachpuff")
-boxplot(dane$homepos_trend, main = "homepos_trend", col = "salmon")
+library(plotly)
+
+boxplots <- list()
+
+boxplots[[1]] <- plot_ly(dane, y = ~hisei_trend, type = "box", 
+                        name = "hisei_trend", color = I("skyblue")) %>%
+                 layout(title = "hisei_trend")
+
+boxplots[[2]] <- plot_ly(dane, y = ~paredint_trend, type = "box", 
+                        name = "paredint_trend", color = I("plum")) %>%
+                 layout(title = "paredint_trend")
+
+boxplots[[3]] <- plot_ly(dane, y = ~escs_trend, type = "box", 
+                        name = "escs_trend", color = I("peachpuff")) %>%
+                 layout(title = "escs_trend")
+boxplots[[4]] <- plot_ly(dane, y = ~homepos_trend, type = "box", 
+                        name = "homepos_trend", color = I("salmon")) %>%
+                 layout(title = "homepos_trend")
+
+interactive_boxplots <- subplot(boxplots, nrows = 2, margin = 0.05) %>%
+  layout(title = "Rozkłady trendów społeczno-ekonomicznych",
+         showlegend = FALSE)
+
+interactive_boxplots
 
 
 ```
