@@ -1,16 +1,41 @@
 ---
-title: "Ekonometria - projekt"
+title: "Analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego uczniów (PISA)"
+author: "Izabela Reszka, Klaudia Woźniak, Piotr Wiśniewski"
+date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output:
-  html_document: default
-  pdf_document: default
-date: "`r Sys.Date()`"
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    toc: true
+    toc_depth: 2
+    fig_caption: true
+  html_document:
+    theme: cerulean
+    highlight: tango
+    toc: true
+    toc_depth: 3 # Głębokość spisu treści
+    toc_float: true # Pływający spis treści w HTML
+    number_sections: true
+    code_folding: hide
+# Uwaga: poniższe opcje wymagają zaawansowanej konfiguracji LaTeX
+# includes:
+#   in_header: header.tex
+# fontsize: 11pt
+# mainfont: Palatino
+# geometry: margin=2.5cm
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Globalne opcje dla wszystkich chunków
+knitr::opts_chunk$set(
+  echo = FALSE,       # Ukryj kod domyślnie
+  message = FALSE,    # Ukryj komunikaty
+  warning = FALSE,    # Ukryj ostrzeżenia
+  fig.align = 'center' # Wyśrodkuj wykresy
+)
 ```
 
-```{r}
+```{r Biblioteki, message=FALSE, warning=FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyverse)
@@ -31,86 +56,143 @@ library(dlookr)
 library(readxl)
 library(spatialreg)
 library(standardize)
+library(broom)
 ```
 
-# Ładowanie danych
-
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
+# Ładowanie danych
 dane <- read.csv("dane.csv", sep = ",", header = TRUE)
 
 ```
-# 1. Cel projektu
+
+# Cel projektu
 
 Celem projektu jest analiza przestrzennych różnic w statusie społeczno-ekonomicznym uczniów na podstawie przeskalowanych danych z badania PISA. Zostaną zastosowane metody analizy przestrzennej oraz ekonometrii przestrzennej w celu identyfikacji regionalnych nierówności edukacyjnych i ich uwarunkowań społecznych i ekonomicznych. Projekt ma na celu dostarczenie wniosków wspierających decyzje w polityce edukacyjnej i regionalnej.
 
 # Struktura badania
 
-## 2.1 Sformułowanie problemu badawczego
+## Sformułowanie problemu badawczego
 
 ### Temat analizy:
 
 **Przestrzenne zróżnicowanie statusu społeczno-ekonomicznego uczniów w krajach uczestniczących w badaniu PISA (2012–2018)**
 
-### **Problem badawczy:**
+### Problem badawczy:
 
 Czy status społeczno-ekonomiczny uczniów (mierzony indeksem ESCS) wykazuje istotne różnice przestrzenne pomiędzy krajami uczestniczącymi w badaniu PISA, a jeśli tak – jakie czynniki społeczno-edukacyjne (wykształcenie rodziców, status zawodowy, zasoby w domu) najlepiej te różnice wyjaśniają?
 
-### **Pytania badawcze:**
+### Pytania badawcze:
 
-1. Jak zmienia się średni status społeczno-ekonomiczny uczniów między krajami i w czasie (2012, 2015, 2018)?
-2. Czy w danych występują struktury przestrzenne, tzn. czy status uczniów w krajach sąsiadujących jest podobny (autokorelacja przestrzenna)?
-3. Które czynniki społeczno-edukacyjne (HISEI, HOMEPOS, PAREDINT) są najsilniej powiązane z poziomem ESCS w różnych krajach?
-4. Czy występują grupy krajów o podobnym profilu społeczno-ekonomicznym uczniów (np. klastry regionalne)?
+1.  Jak zmienia się średni status społeczno-ekonomiczny uczniów między krajami i w czasie (2012, 2015, 2018)?
+2.  Czy w danych występują struktury przestrzenne, tzn. czy status uczniów w krajach sąsiadujących jest podobny (autokorelacja przestrzenna)?
+3.  Które czynniki społeczno-edukacyjne (HISEI, HOMEPOS, PAREDINT) są najsilniej powiązane z poziomem ESCS w różnych krajach?
+4.  Czy występują grupy krajów o podobnym profilu społeczno-ekonomicznym uczniów (np. klastry regionalne)?
 
-### **Uzasadnienie wyboru tematu:**
+### Uzasadnienie wyboru tematu:
 
 Status społeczno-ekonomiczny uczniów jest silnie powiązany z ich osiągnięciami edukacyjnymi i przyszłymi szansami życiowymi. Analiza jego przestrzennego zróżnicowania pozwala zidentyfikować regiony szczególnie zagrożone nierównościami edukacyjnymi i może wspierać międzynarodowe oraz krajowe polityki wyrównywania szans edukacyjnych.
 
-### **Poziom przestrzenny analizy:**
+### Poziom przestrzenny analizy:
 
 Analiza będzie przeprowadzona na poziomie **kraju** (identyfikowanego przez zmienną `cnt`), z uwzględnieniem możliwości rozszerzenia na poziom regionalny (np. NUTS-2), jeśli dane przestrzenne będą dostępne (np. shapefile krajów z granicami administracyjnymi).
 
+## Przegląd literatury
+
+-   **Książka:** LeSage, J. P., & Pace, R. K. (2009). *Introduction to Spatial Econometrics*. CRC press.
+
+-   **Raport:** OECD (2019), *PISA 2018 Technical Report*, Chapter 16: "Student-level indices derived from the student context questionnaires". OECD Publishing, Paris. **Link:** [Link do raportu na stronie OECD](https://www.oecd.org/pisa/data/pisa2018technicalreport/PISA2018-technical-report-chapter-16.pdf)
+
+-   **Artykuł:** Sirin, S. R. (2005). "Socioeconomic Status and Academic Achievement: A Meta-Analytic Review of Research". *Review of Educational Research, 75*(3), 417-453. **Link:** [Link do artykułu (DOI)](https://doi.org/10.3102/00346543075003417)
+
+-   **Artykuł:** Butler, T., & Hamnett, C. (2007). "The geography of education: introduction". *Urban Studies, 44*(7), 1161-1174. **Link:** [Link do artykułu (DOI)](https://doi.org/10.1080/00420980701329174)
+
+-   **Artykuł:** Chmielewski, A. K., & l-hajj, C. C. (2021). "The global increase in the socioeconomic achievement gap". *American Sociological Review, 86*(4), 603-632. **Link:** [Link do artykułu (DOI)](https://doi.org/10.1177/00031224211024316)
+
+-   **Artykuł:** Pinar, M. (2019). "Spatial dependence in education production and the effects of competition on efficiency". *Economics of Education Review*, 73, 101923. **Link:** [Link do artykułu (DOI)](https://doi.org/10.1016/j.econedurev.2019.101923)
+
 # Opis danych
 
-Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczniów z różnych krajów i lat. Obejmują 1 447 787 obserwacji z ponad 70 krajów w trzech cyklach badania (2012, 2015, 2018). W analizie wykorzystano zarówno cechy indywidualne uczniów, jak i dane identyfikujące kraj, szkołę i przynależność do OECD.
+Dane pochodzą z międzynarodowego badania edukacyjnego PISA, obejmującego uczniów z różnych krajów i lat. Obejmują 1 447 787 obserwacji z ponad 70 krajów w trzech cyklach badania (2012, 2015, 2018). W analizie wykorzystano zarówno cechy indywidualne uczniów, jak i dane identyfikujące kraj, szkołę i przynależność do OECD. \##
 
-### **Struktura danych:**
+## Struktura danych:
 
-| Zmienna             | Opis                                                                  |
-| ------------------- | --------------------------------------------------------------------- |
-| **cycnt**           | Unikalny identyfikator kraju i cyklu (np. `05POL` = Polska 2012).     |
-| **cycle**           | Rok badania PISA (5 = 2012, 6 = 2015, 7 = 2018).                      |
-| **cnt**             | Kod kraju trzyliterowy (np. `POL`, `DEU`, `USA`).                     |
-| **schoolid**        | ID szkoły (unikalne w obrębie danego kraju i cyklu).                  |
-| **studentid**       | ID ucznia (unikalne w obrębie szkoły i cyklu).                        |
-| **oecd**            | Przynależność kraju do OECD (`1` = tak, `0` = nie).                   |
-| **escs\_trend**     | Indeks statusu społeczno-ekonomicznego ucznia (ESCS, standaryzowany). |
-| **hisei\_trend**    | Indeks najwyższego statusu zawodowego rodzica (HISEI).                |
-| **homepos\_trend**  | Indeks wyposażenia domu w zasoby edukacyjne (HOMEPOS).                |
-| **paredint\_trend** | Poziom wykształcenia rodziców (PAREDINT, wg skali ISCED).             |
++--------------------+-----------------------------------------------------------------------+
+| Zmienna            | Opis                                                                  |
++====================+=======================================================================+
+| **cycnt**          | Unikalny identyfikator kraju i cyklu (np. `05POL` = Polska 2012).     |
++--------------------+-----------------------------------------------------------------------+
+| **cycle**          | Rok badania PISA (5 = 2012, 6 = 2015, 7 = 2018).                      |
++--------------------+-----------------------------------------------------------------------+
+| **cnt**            | Kod kraju trzyliterowy (np. `POL`, `DEU`, `USA`).                     |
++--------------------+-----------------------------------------------------------------------+
+| **schoolid**       | ID szkoły (unikalne w obrębie danego kraju i cyklu).                  |
++--------------------+-----------------------------------------------------------------------+
+| **studentid**      | ID ucznia (unikalne w obrębie szkoły i cyklu).                        |
++--------------------+-----------------------------------------------------------------------+
+| **oecd**           | Przynależność kraju do OECD (`1` = tak, `0` = nie).                   |
++--------------------+-----------------------------------------------------------------------+
+| **escs_trend**     | Indeks statusu społeczno-ekonomicznego ucznia (ESCS, standaryzowany). |
++--------------------+-----------------------------------------------------------------------+
+| **hisei_trend**    | Indeks najwyższego statusu zawodowego rodzica (HISEI).                |
++--------------------+-----------------------------------------------------------------------+
+| **homepos_trend**  | Indeks wyposażenia domu w zasoby edukacyjne (HOMEPOS).                |
++--------------------+-----------------------------------------------------------------------+
+| **paredint_trend** | Poziom wykształcenia rodziców (PAREDINT, wg skali ISCED).             |
++--------------------+-----------------------------------------------------------------------+
 
-### **Charakterystyka danych:**
+## Charakterystyka danych:
 
-* **Liczba krajów:** 73 (np. POL, DEU, FRA, JPN, USA, BRA, QAT...)
-* **Lata pomiarów:** 2012, 2015, 2018 (zakodowane jako 5, 6, 7)
-* **Kraje OECD:** rozróżnienie na kraje OECD (`1`) i nie-OECD (`0`)
-* **Zakres zmiennych społeczno-ekonomicznych:** zmienne `escs_trend`, `hisei_trend`, `homepos_trend` i `paredint_trend` opisują status ucznia w ujęciu międzynarodowym, w sposób porównywalny między cyklami.
+-   **Liczba krajów:** 73 (np. POL, DEU, FRA, JPN, USA, BRA, QAT...)
+-   **Lata pomiarów:** 2012, 2015, 2018 (zakodowane jako 5, 6, 7)
+-   **Kraje OECD:** rozróżnienie na kraje OECD (`1`) i nie-OECD (`0`)
+-   **Zakres zmiennych społeczno-ekonomicznych:** zmienne `escs_trend`, `hisei_trend`, `homepos_trend` i `paredint_trend` opisują status ucznia w ujęciu międzynarodowym, w sposób porównywalny między cyklami.
 
+# Analiza danych
 
-# Identyfikacja braków danych i obserwacji odstających
+Ten rozdział stanowi główną, empiryczną część projektu. Rozpoczyna się od szczegółowej, wstępnej analizy danych, której celem jest poznanie struktury i charakterystyki badanych zmiennych. Następnie przechodzi do eksploracyjnej analizy przestrzennej (ESDA) i finalnie do etapu modelowania ekonometrycznego.
 
-## Braki danych
+## Wstępna analiza danych
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
+Zgodnie z metodyką badawczą, przed przystąpieniem do modelowania, przeprowadzono wstępną analizę danych. Celem tej części jest zbadanie podstawowych właściwości statystycznych zmiennych, ocena jakości danych oraz wizualizacja rozkładów i wzajemnych relacji
+
+### Identyfikacja braków danych i obserwacji odstających
+
+Kluczowym elementem przygotowania danych do analizy jest zapewnienie ich wysokiej jakości. W tym podrozdziale skupiono się na identyfikacji i obsłudze dwóch najczęstszych problemów, które mogą wpłynąć na wiarygodność wyników: brakujących obserwacji oraz wartości odstających.
+
+#### Braki danych
+
+Pierwszym krokiem weryfikacji jakości zbioru jest ocena jego kompletności. Poniższa analiza przedstawia skalę oraz rozkład braków danych dla kluczowych zmiennych uwzględnionych w badaniu.
+
+```{r plot-missing-summary, echo=FALSE, message=FALSE, warning=FALSE}
+# Podsumowanie braków danych
 missing_summary <- miss_var_summary(dane)
 
-ggplot(missing_summary, aes(x = reorder(variable, -pct_miss), y = pct_miss)) +
-  geom_bar(stat = "identity", fill = "plum2") +
-  coord_flip() +
-  labs(title = "Procent brakujących wartości w kolumnach",
-       x = "Zmienne",
-       y = "Procent braków (%)") +
-  theme_minimal()
+# TYLKO zmienne z brakami
+missing_summary <- miss_var_summary(dane)
+missing_summary_filtered <- missing_summary %>% 
+  filter(pct_miss > 0)
+
+# Tworzymy ulepszony wykres z poprawką
+ggplot(missing_summary_filtered, aes(x = pct_miss, y = reorder(variable, pct_miss))) +
+  geom_col(fill = "plum3", width = 0.8) +
+  
+  # === TUTAJ JEST POPRAWKA ===
+  # Dodajemy as.numeric(), aby R potraktował pct_miss jako zwykłą liczbę
+  geom_text(aes(label = paste0(round(as.numeric(pct_miss), 1), "%")), 
+            hjust = -0.2, 
+            size = 3.5, 
+            color = "gray20") +
+  
+  scale_x_continuous(expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Procent brakujących wartości w kolumnach",
+    subtitle = "Wyświetlono tylko zmienne z brakującymi danymi.",
+    x = "Procent braków (%)",
+    y = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major.y = element_blank())
+
 ```
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
@@ -155,6 +237,7 @@ kable(
     full_width = FALSE,
     bootstrap_options = c("striped", "hover", "condensed")
   )
+
 ```
 
 Wykres słupkowy przedstawia procent brakujących danych dla każdej zmiennej w zbiorze. Największy odsetek braków występuje w zmiennej:
@@ -180,8 +263,9 @@ dane$homepos_trend<-imputate_na(dane, homepos_trend, method = "median")
 #missing_summary2 <- miss_var_summary(dane)
 ```
 
+#### Odstające
 
-## Odstające
+Poza brakami danych, drugim kluczowym problemem, który może zakłócić wyniki analizy statystycznej, są obserwacje odstające. Są to wartości, które znacząco odbiegają od pozostałych danych i mogą nieproporcjonalnie wpływać na miary takie jak średnia czy oszacowania modelu regresji. W celu ich wizualnej identyfikacji, dla każdej z kluczowych zmiennych ilościowych przygotowano wykresy pudełkowe.
 
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 dane$hisei_trend <- as.numeric(dane$hisei_trend)
@@ -214,9 +298,11 @@ Przedstawiono wykresy pudełkowe dla kluczowych zmiennych ilościowych, umożliw
 
 Obserwacje odstające są obecne, ale nie są ekstremalne. W zależności od dalszych analiz, można je uwzględnić lub rozważyć ich ograniczoną korektę.
 
-# Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
+### Obliczenie podstawowych statystyk opisowych (m.in. średnia, mediana, min, max, odchylenie standardowe, współczynniki asymetrii)
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
+Po ocenie jakości danych pod kątem braków i wartości odstających, kolejnym krokiem jest ilościowe scharakteryzowanie rozkładów zmiennych. Poniższa tabela przedstawia podstawowe statystyki opisowe, takie jak miary tendencji centralnej (średnia, mediana), rozproszenia (odchylenie standardowe, min, max) oraz asymetrii, które pozwalają na głębsze zrozumienie natury analizowanych danych.
+
+```{r eval=TRUE, echo=FALSE, warning=FALSE, results='asis'}
 attach(dane)
 dane2 <- data_frame(homepos_trend, escs_trend, hisei_trend, paredint_trend)
 ```
@@ -253,7 +339,6 @@ Dla homepos_trend (trend zasobów domowych), wartości wahają się od -6.80 do 
 
 Zmienna paredint_trend (trend wykształcenia rodziców) ma średnią 13.24 i medianę 14.5, co może wskazywać na lekką asymetrię lewostronną (-1.18). Zakres danych (3–16) i relatywnie wysokie odchylenie standardowe (2.99) sugerują znaczną różnorodność w poziomie wykształcenia rodziców między krajami.
 
-
 ```{r, echo=FALSE, results='asis', eval=TRUE}
 macierz_korelacji <- cor(dane2)
 
@@ -261,6 +346,7 @@ corrplot(macierz_korelacji, method = "color",
          addCoef.col = "black", tl.col = "black", tl.cex = 0.8,
          col = colorRampPalette(c("blue", "white", "red"))(200))
 ```
+
 1.  escs_trend jest silnie dodatnio skorelowany z:
 
 -   homepos_trend (r = 0,78),
@@ -269,135 +355,168 @@ corrplot(macierz_korelacji, method = "color",
 
 -   paredint_trend (r = 0,82).
 
-2. homepos_trend i hisei_trend są umiarkowanie skorelowane (r = 0,42),
+2.  homepos_trend i hisei_trend są umiarkowanie skorelowane (r = 0,42),
 
-3. homepos_trend i paredint_trend również wykazują umiarkowaną korelację (r = 0,44),
+3.  homepos_trend i paredint_trend również wykazują umiarkowaną korelację (r = 0,44),
 
-4. hisei_trend i paredint_trend mają średnio silną korelację (r = 049).
+4.  hisei_trend i paredint_trend mają średnio silną korelację (r = 049).
 
 Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos_trend), statusem zawodowym rodziców (hisei_trend), jak i ich wykształceniem (paredint_trend), co potwierdza, że ESCS dobrze syntetyzuje te aspekty społeczno-ekonomiczne.
 
-# Wykresy: histogramy, wykresy rozrzutu, gęstości
+### Wykresy: histogramy, wykresy rozrzutu, gęstości
 
-## Wykresy gęstości
+Uzupełnieniem numerycznej analizy statystyk opisowych jest wizualna eksploracja danych. Wykresy pozwalają na bardziej intuicyjne zrozumienie kształtu rozkładów poszczególnych zmiennych oraz na zbadanie potencjalnych zależności między nimi. W tej części zaprezentowano serię wizualizacji, aby kompleksowo zobrazować strukturę danych.
 
-```{r, echo=FALSE, results='asis', eval=TRUE}
-ggplot(dane, aes(x = homepos_trend)) +
-  geom_density(fill = "orange", alpha = 0.5) +
-  ggtitle("Gęstość homepos_trend")
+#### Histogramy z wykresami gęstości
 
-ggplot(dane, aes(x = hisei_trend)) +
-  geom_density(fill = "plum", alpha = 0.5) +
-  ggtitle("Gęstość hisei_trend")
+Analizę wizualną rozpoczyna zbadanie rozkładu każdej kluczowej zmiennej. Poniższe wykresy łączą histogramy, obrazujące empiryczną częstość występowania wartości, z nałożonymi na nie wygładzonymi krzywymi gęstości. Taka połączona prezentacja pozwala na precyzyjną ocenę kształtu rozkładu, w tym jego symetrii, skośności oraz potencjalnej wielomodalności.
 
-ggplot(dane, aes(x = escs_trend)) +
-  geom_density(fill = "lightblue", alpha = 0.5) +
-  ggtitle("Gęstość escs_trend")
+```{r Histogram_gestosc, message=FALSE, warning=FALSE}
 
-ggplot(dane, aes(x = paredint_trend)) +
-  geom_density(fill = "salmon", alpha = 0.5) +
-  ggtitle("Gęstość paredint_trend")
-
-
-```
-
-## Histogramy
-
-Może nałożymy gęstość (pkt wyżej) na histogramy ????
-
-```{r, echo=FALSE, results='asis', eval=TRUE}
 dane_long <- dane2 %>%
-  pivot_longer(cols = c(homepos_trend, escs_trend, hisei_trend, paredint_trend),
-               names_to = "zmienna", values_to = "wartość")
+  pivot_longer(cols = everything(), # Zbieramy wszystkie kolumny
+               names_to = "zmienna",
+               values_to = "wartość")
+
+# Tworzenie połączonego wykresu
 ggplot(dane_long, aes(x = wartość)) +
-  geom_histogram(bins = 30, fill = "peachpuff", color = "black") +
-  facet_wrap(~ zmienna, scales = "free") +
-  labs(title = "Histogramy wybranych zmiennych",
-       x = "Wartość",
-       y = "Liczba obserwacji") +
-  theme_minimal()
-
-```
-
-Histogram zmiennej escs_trend, czyli ogólnego wskaźnika statusu społeczno-ekonomicznego uczniów, przedstawia rozkład zbliżony do normalnego, z lekką skośnością. Większość obserwacji koncentruje się wokół wartości bliskich zeru, co sugeruje, że przeważają uczniowie o przeciętnym statusie społeczno-ekonomicznym. Ekstremalnie niskie lub wysokie wartości są stosunkowo rzadkie, co może świadczyć o względnym wyrównaniu warunków społecznych wśród badanych uczniów.
-
-
-Zmienna hisei_trend, odzwierciedlająca status zawodowy rodziców, ma wielomodalny rozkład (rozkład, który ma więcej niż jedno maksimum (szczyt) w wykresie), co oznacza obecność kilku wyraźnych szczytów. Wskazuje to na istnienie kilku dominujących grup zawodowych, takich jak np. robotnicy, specjaliści czy menedżerowie. Takie zróżnicowanie sugeruje dużą różnorodność środowisk zawodowych, z jakich pochodzą uczniowie, oraz możliwe wpływy struktury rynku pracy w poszczególnych krajach.
-
-Rozkład zmiennej homepos_trend, opisującej zasoby edukacyjne w domu (np. liczba książek, komputery, biurko), również zbliżony jest do rozkładu normalnego, z lekkim przechyleniem. Najwięcej uczniów ma dostęp do umiarkowanych lub przeciętnych zasobów edukacyjnych, natomiast skrajnie niskie zasoby występują rzadziej. Wskazuje to na pewien stopień wyrównania dostępu do podstawowych narzędzi wspierających edukację.
-
-
-
-W przypadku zmiennej paredint_trend, mierzącej liczbę lat nauki rodziców (czyli ich poziom wykształcenia), widoczny jest dyskretny rozkład ze szczytami w okolicach 6, 9, 12 i 15 lat edukacji. Oznacza to, że wielu rodziców ukończyło typowe poziomy nauczania, odpowiadające podstawowemu, średniemu oraz wyższemu wykształceniu. Najwięcej uczniów pochodzi z rodzin, w których rodzice mają co najmniej wykształcenie średnie, co może mieć znaczenie dla szans edukacyjnych tych uczniów.
-
-
-
-
-## Wykresy rozrzutu
-
-TEN KOD ZA DŁUGO SIĘ LADUJE --- TRZEBA GO ZOPTYMALIZOWAĆ
-
-```{r, echo=FALSE, results='asis', eval=TRUE}
-par(mfrow = c(3, 2))
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-
-ggplot(dane, aes(x = homepos_trend, y = escs_trend)) +
-  geom_point(color = "mediumvioletred", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs Escs_trend",
-       x = "Homepos_trend",
-       y = "Escs_trend") +
-  theme_minimal()
-
-ggplot(dane, aes(x = homepos_trend, y = hisei_trend)) +
-  geom_point(color = "orange", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs hisei_trend",
-       x = "Homepos_trend",
-       y = "hisei_trend") +
-  theme_minimal()
-
-ggplot(dane, aes(x = homepos_trend, y = paredint_trend)) +
-  geom_point(color = "lightgreen", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: Homepos_trend vs paredint_trend",
-       x = "Homepos_trend",
-       y = "paredint_trend") +
-  theme_minimal()
-
-##############################################################################################################################
-
-
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-
-ggplot(dane, aes(x = escs_trend, y = hisei_trend)) +
-  geom_point(color = "yellow", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: escs_trend vs hisei_trend",
-       x = "escs_trend",
-       y = "hisei_trend") +
-  theme_minimal()
-
-ggplot(dane, aes(x = escs_trend, y = paredint_trend)) +
-  geom_point(color = "slateblue1", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: escs_trend vs paredint_trend",
-       x = "escs_trend",
-       y = "paredint_trend") +
-  theme_minimal()
-
-##############################################################################################################################
-
-#(homepos_trend, escs_trend, hisei_trend, paredint_trend)
-
-ggplot(dane, aes(x = hisei_trend, y = paredint_trend)) +
-  geom_point(color = "paleturquoise2", alpha = 0.5) +
-  labs(title = "Wykres rozrzutu: hisei_trend vs paredint_trend",
-       x = "hisei_trend",
-       y = "paredint_trend") +
-  theme_minimal()
+  # Warstwa histogramu: kluczowe jest ustawienie osi Y na gęstość (aes(y = ..density..))
+  geom_histogram(
+    aes(y = ..density..),
+    bins = 30,
+    fill = "skyblue",
+    color = "white",
+    alpha = 0.7
+  ) +
+  # Warstwa krzywej gęstości
+  geom_density(
+    color = "darkred",
+    linewidth = 1.2 # Używamy linewidth zamiast size dla nowoczesnego ggplot2
+  ) +
+  # Podział na panele dla każdej zmiennej
+  facet_wrap( ~ zmienna, scales = "free") +
+  # Etykiety i tytuły
+  labs(
+    title = "Histogramy i krzywe gęstości dla kluczowych zmiennych",
+    subtitle = "Porównanie rozkładu z wygładzonym oszacowaniem gęstości",
+    x = "Wartość zmiennej",
+    y = "Gęstość"
+  ) +
+  # Estetyczny motyw
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_text(face = "bold")) # Pogrubienie nazw zmiennych
 
 
 ```
 
-# Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
+#### Interpretacja poszczególnych zmiennych:
 
-```{r}
+-   **escs_trend (Indeks statusu społeczno-ekonomicznego)**
+
+    -   **Obserwacja statystyczna:** Rozkład tej zmiennej jest jednomodalny i najbardziej zbliżony do rozkładu normalnego spośród analizowanych. Jest jednak widoczna delikatna **lewostronna asymetria (ujemna skośność)**, co potwierdza krzywa gęstości, która opada łagodniej po lewej stronie wartości szczytowej.
+
+    -   **Wniosek analityczny:** Dominanta rozkładu znajduje się nieznacznie powyżej zera, jednak obecność dłuższego lewego "ogona" sugeruje, że w próbie istnieje wyraźna grupa uczniów o statusie istotnie niższym od przeciętnej, co "przeciąga" średnią w dół. Ta niewielka asymetria generalnie nie powinna stanowić poważnego problemu dla standardowych modeli regresyjnych, ale warto będzie ją zweryfikować podczas analizy reszt modelu.
+
+-   **hisei_trend (Indeks statusu zawodowego rodziców)**
+
+    -   **Obserwacja statystyczna:** Rozkład tej zmiennej jest jawnie **wielomodalny**, co oznacza, że posiada kilka wyraźnych maksimów lokalnych. Krzywa gęstości doskonale to uwypukla, wskazując na co najmniej trzy dominujące "grupowania" wartości.
+
+    -   **Wniosek analityczny:** Taki kształt rozkładu jest typowy dla zmiennych opisujących strukturę społeczną lub rynek pracy. Poszczególne mody mogą odpowiadać dominującym grupom zawodowym o różnym prestiżu, np. pracownikom fizycznym, specjalistom średniego szczebla i kadrze zarządzającej. Z perspektywy modelowania, traktowanie tej zmiennej jako liniowego predyktora może być uproszczeniem. Lepsze rezultaty mogłoby przynieść przekształcenie jej w zmienną kategorialną (np. na podstawie kwantyli) w celu uchwycenia nieliniowego wpływu statusu zawodowego.
+
+-   **homepos_trend (Indeks zasobów domowych)**
+
+    -   **Obserwacja statystyczna:** Rozkład jest silnie skoncentrowany wokół wartości centralnej, co czyni go **wysokim i smukłym (rozkład leptokurtyczny)**. Podobnie jak w przypadku `escs_trend`, występuje tu niewielka asymetria lewostronna.
+
+    -   **Wniosek analityczny:** Niska wariancja i wysoka koncentracja wskazują, że większość badanych uczniów dysponuje podobnym, przeciętnym poziomem zasobów edukacyjnych w domu. Istnienie lewego ogona ponownie sygnalizuje obecność grupy w znacznie gorszej sytuacji materialnej.
+
+-   **paredint_trend (Indeks wykształcenia rodziców)**
+
+    -   **Obserwacja statystyczna:** Wykres jednoznacznie pokazuje, że jest to zmienna o charakterze **dyskretnym**, a nie ciągłym. Obserwacje grupują się wokół kilku konkretnych wartości, tworząc wyraźne, oddzielone od siebie słupki. Główne piki widoczne są w okolicach wartości 12 i 16.
+    -   **Wniosek analityczny:** Rozkład ten odzwierciedla progi edukacyjne w systemach oświaty (np. ukończenie szkoły średniej - ok. 12 lat nauki, oraz studiów wyższych - ok. 16 lat). Krzywa gęstości, mimo próby wygładzenia, dobrze oddaje te mody. W analizie regresji zmienna ta powinna być traktowana z ostrożnością. Zamiast jako zmienną ciągłą, można ją z powodzeniem zaimplementować jako zbiór zmiennych zero-jedynkowych (fikcyjnych), gdzie każda z nich odpowiadałaby osiągnięciu konkretnego progu edukacyjnego. Takie podejście pozwoliłoby precyzyjniej zmierzyć nieliniowy wpływ wykształcenia rodziców.
+
+#### Podsumowanie
+
+Analiza wizualna rozkładów dostarczyła kluczowych informacji: zmienne `escs_trend` i `homepos_trend` mają rozkłady zbliżone do normalnego, co dobrze rokuje dla modelowania. Zmienna `hisei_trend` jest wielomodalna, a `paredint_trend` ma charakter dyskretny. Te dwie ostatnie mogą wymagać specjalnego potraktowania w modelu (np. kategoryzacji), aby w pełni wykorzystać ich potencjał informacyjny i uniknąć błędnej specyfikacji modelu.
+
+### Wykresy rozrzutu
+
+W kolejnym kroku analizy wstępnej zbadano wzajemne relacje pomiędzy kluczowymi zmiennymi ilościowymi. Poniższe wykresy rozrzutu pozwalają na wizualną ocenę siły, kierunku oraz potencjalnej formy zależności, co jest kluczowe dla późniejszej specyfikacji modelu ekonometrycznego.
+
+```{r macierz-zaleznosci-kolorowa, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, fig.align='center'}
+
+#install.packages("GGally")
+
+library(dplyr)
+library(GGally)
+
+#Przygotowanie danych z grupami
+dane_do_wykresu_grupowane <- dane %>%
+  select(escs_trend, hisei_trend, homepos_trend, paredint_trend) %>%
+  sample_n(size = 10000, replace = FALSE) %>%
+  mutate(
+    grupa_escs = cut(
+      escs_trend,
+      breaks = quantile(escs_trend, probs = c(0, 0.33, 0.66, 1), na.rm = TRUE),
+      labels = c("Niski Status", "Średni Status", "Wysoki Status"),
+      include.lowest = TRUE
+    )
+  )
+
+#Zdefiniowanie prostej funkcji pomocniczej
+ogolna_korelacja <- function(data, mapping, ...) {
+  mapping$colour <- NULL
+  ggally_cor(data, mapping, ...)
+}
+
+#Wygenerowanie macierzy z zastosowaniem naszej funkcji
+ggpairs(
+  dane_do_wykresu_grupowane,
+  mapping = aes(color = grupa_escs, alpha = 0.5), 
+  title = "Macierz zależności z podziałem na grupy statusu społ.-ekon.",
+  columns = 1:4,
+  
+  # Konfiguracja dolnego trójkąta
+  lower = list(
+    continuous = wrap("points", size = 0.5)
+  ),
+  
+  # Konfiguracja przekątnej
+  diag = list(
+    continuous = wrap("densityDiag", alpha = 0.5)
+  ),
+  
+  # Ogólną korelacja
+  upper = list(
+    continuous = ogolna_korelacja
+  ),
+  
+  legend = 1
+) +
+scale_color_manual(values = c("Niski Status" = "#E41A1C", "Średni Status" = "#377EB8", "Wysoki Status" = "#4DAF4A")) +
+scale_fill_manual(values = c("Niski Status" = "#E41A1C", "Średni Status" = "#377EB8", "Wysoki Status" = "#4DAF4A")) +
+theme_light() +
+theme(
+  plot.title = element_text(size = 16, face = "bold"),
+  strip.text = element_text(size = 10, face = "bold"),
+  legend.position = "bottom"
+)
+```
+
+Zaprezentowana macierz wykresów to zwięzłe, wielowymiarowe podsumowanie danych. Zastosowanie kolorów dla grup statusu społeczno-ekonomicznego (`Niski`, `Średni`, `Wysoki`) pozwala na szybką identyfikację kluczowych wzorców i zależności.
+
+-   **Silne zależności i systematyczne różnice:** Potwierdzono bardzo silne, dodatnie korelacje (współczynniki od 0.77 do 0.82) między ogólnym wskaźnikiem `escs_trend` a jego składowymi. Rozkłady gęstości (na przekątnej) oraz wykresy rozrzutu (dolny trójkąt) jednoznacznie pokazują, że grupy o wyższym statusie systematycznie osiągają wyższe wartości we wszystkich analizowanych wymiarach: od wykształcenia rodziców (`paredint_trend`) po zasoby domowe (`homepos_trend`).
+
+-   **Interakcje między zmiennymi:** Wizualizacja ujawnia istotne interakcje. Na przykład, wśród uczniów, których rodzice legitymują się wykształceniem wyższym, praktycznie nie występują osoby z grupy o "Niskim Statusie", co wskazuje na silne powiązanie kapitału edukacyjnego z ogólnym statusem.
+
+-   **Implikacje dla modelowania (współliniowość):** Najważniejszy wniosek dla dalszej analizy to sygnał **potencjalnej współliniowości**. Umiarkowane korelacje między samymi zmiennymi objaśniającymi (0.43-0.50) sugerują, że ich wpływ na `escs_trend` może się częściowo pokrywać. Wymaga to ostrożności przy interpretacji indywidualnych współczynników w modelu regresji i uzasadnia późniejsze sprawdzenie wskaźnika VIF.
+
+Podsumowując, wykres efektywnie ilustruje złożoną strukturę danych i dostarcza kluczowych wskazówek dla etapu modelowania ekonometrycznego.
+
+### Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
+
+W celu zbadania przestrzennego zróżnicowania analizowanych zjawisk, przygotowano serię kartogramów. Każda mapa przedstawia średnią wartość wybranej zmiennej na poziomie kraju, co pozwala na identyfikację globalnych wzorców i regionalnych skupisk. Zastosowana skala barw (`plasma`) przypisuje wyższym wartościom jaśniejsze kolory (żółty), a niższym – ciemniejsze (fioletowy/granatowy). Kraje bez dostępnych danych oznaczono kolorem szarym.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 dane_kraje <- dane %>%
   group_by(cnt) %>%
   summarise(
@@ -427,41 +546,31 @@ rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
 
 ```
 
-Średni ESCS Trend w krajach
+#### Interpretacja poszczególnych map
 
-Mapa przedstawia przestrzenne zróżnicowanie średniego trendowego indeksu statusu społeczno-ekonomicznego uczniów (ESCS) w poszczególnych krajach uczestniczących w badaniu PISA. Wartości dodatnie (w odcieniach żółci i pomarańczu) oznaczają kraje, w których uczniowie mają wyższy status społeczno-ekonomiczny niż średnia OECD. Z kolei wartości ujemne (w odcieniach fioletu i granatu) wskazują na niższy status społeczno-ekonomiczny.
-Mapa pokazuje wyraźne zróżnicowanie pomiędzy regionami — wyższe wartości dominują w Europie Północnej, Kanadzie i Australii, natomiast niższe widoczne są m.in. w Ameryce Południowej, Maroko, Arabia Saudyjska. 
-Zróżnicowanie indeksu ESCS może odzwierciedlać poziom rozwoju społeczno-gospodarczego i dostęp uczniów do zasobów edukacyjnych. Może to mieć istotne znaczenie dla planowania polityk edukacyjnych i społecznych w danym kraju.
+-   **Średni ESCS Trend w krajach (zmienna zależna)** Kartogram dla zmiennej `escs_trend` ukazuje wyraźny podział globalny. Kraje o najwyższym średnim statusie społeczno-ekonomicznym uczniów to przede wszystkim państwa skandynawskie, Kanada, Australia, Nowa Zelandia oraz kraje Europy Zachodniej. Z drugiej strony, wyraźnie niższe wartości obserwuje się w krajach Ameryki Południowej (np. Brazylia, Peru, Kolumbia) oraz w niektórych krajach Azji i Bliskiego Wschodu (np. Indonezja, Katar, Jordania).
 
+-   **Średni HISEI Trend w krajach (status zawodowy rodziców)** Mapa rozkładu wskaźnika prestiżu zawodowego rodziców w dużej mierze pokrywa się z rozkładem ogólnego statusu ESCS. Potwierdza to, że regiony, w których rodzice statystycznie wykonują zawody o wyższym statusie, to te same, w których ogólny status społeczno-ekonomiczny uczniów jest wyższy.
 
-Średni HISEI Trend w krajach
+-   **Średni HOMEPOS Trend w krajach (zasoby domowe)** Podobny wzorzec przestrzenny jest widoczny dla wskaźnika zasobów edukacyjnych w domu. Regiony zamożniejsze, takie jak Europa Północna i Australia, charakteryzują się znacznie lepszym wyposażeniem domów uczniów w zasoby wspierające naukę (książki, komputery, dostęp do internetu) niż kraje rozwijające się.
 
-Mapa pokazuje średnią wartość trendowego indeksu HISEI w krajach objętych badaniem PISA. HISEI odzwierciedla najwyższy status zawodowy rodzica ucznia. Im wyższy wynik, tym bardziej prestiżowy zawód zajmuje przynajmniej jeden z rodziców. W krajach rozwiniętych, takich jak Kanada, Australia czy kraje skandynawskie, wartości HISEI są wyższe, co może świadczyć o wyższym prestiżu zawodowym rodziców uczniów. Niższe wartości w niektórych krajach Ameryki Południowej (np Brazylia), Europy Południowo-Wschodniej mogą wskazywać na ograniczony dostęp do zawodów o wyższym statusie społecznym.
+-   **Średni PAREDINT Trend w krajach (wykształcenie rodziców)** Kartogram dla `paredint_trend` uzupełnia obraz, pokazując, że średni poziom wykształcenia rodziców jest najwyższy w tych samych, rozwiniętych gospodarczo regionach świata. To właśnie w tych krajach kapitał ludzki rodziców, mierzony latami nauki, jest największy.
 
+#### Wnioski porównawcze
 
-Średni HOMEPOS Trend w krajach
+Analiza porównawcza wszystkich czterech kartogramów prowadzi do jednoznacznego wniosku: **przestrzenne zróżnicowanie statusu społeczno-ekonomicznego uczniów nie jest przypadkowe, lecz odzwierciedla głęboko zakorzenione, globalne podziały rozwojowe.**
 
-Wykres przedstawia średni poziom zasobów edukacyjnych w domach uczniów (indeks homepos_trend) w różnych krajach uczestniczących w badaniu PISA. Wysokie wartości (żółte i pomarańczowe odcienie) wskazują na lepsze wyposażenie domów w środki wspierające naukę, takie jak książki, biurka, komputery czy internet. Niskie wartości (fioletowe i niebieskie odcienie) sugerują niedobór tych zasobów.
-Można zauważyć wyraźne różnice między krajami rozwiniętymi a rozwijającymi się – np. wysoki poziom zasobów w krajach skandynawskich, Kanadzie i Australii vs. niski poziom w Ameryce Południowej i niektórych krajach Azji.
+Regiony takie jak **Skandynawia, Kanada, Australia i Europa Zachodnia** tworzą spójny klaster o wysokim kapitale ludzkim (wykształcenie), zawodowym (prestiż pracy) i materialnym (zasoby w domu). Z kolei kraje **Ameryki Południowej i części Azji** tworzą klaster o systematycznie niższych wartościach we wszystkich tych wymiarach. Ta silna spójność przestrzenna i wizualna identyfikacja klastrów "bogatych" i "biednych" regionów silnie sugeruje, że w dalszej analizie mogą pojawić się **istotne efekty autokorelacji przestrzennej**, które zbadamy za pomocą wskaźnika I Morana.
 
+# Eksploracyjna analiza danych przestrzennych (ESDA)
 
-Średni PAREDINT Trend w krajach
-Wykres ilustruje średni poziom wykształcenia rodziców uczniów (paredint_trend) w poszczególnych krajach, oparty na skali międzynarodowej (ISCED). Wyższe wartości (żółto-pomarańczowe odcienie) oznaczają wyższy przeciętny poziom wykształcenia rodziców, np. wykształcenie wyższe. Niższe wartości (fioletowe odcienie) sugerują, że dominujące jest wykształcenie średnie lub podstawowe.
-Wysoki poziom można zaobserwować m.in. w krajach Europy, Kanadzie, Australii, natomiast niski – w wielu państwach Ameryki Południowej, Arabii Saudyjskiej.
+## Globalna autokorelacja przestrzenna: Współczynnik I Morana
 
+Współczynnik I Morana to podstawowy test sprawdzający, czy wartości analizowanej zmiennej są w przestrzeni rozmieszczone losowo, czy też tworzą geograficzne wzorce.
 
-Wnioski porównawcze
-Kraje rozwinięte (np. Skandynawia, Kanada, Australia, Holandia) wypadają konsekwentnie wysoko we wszystkich wskaźnikach – co świadczy o ich zrównoważonym profilu społeczno-edukacyjnym.
-Kraje Ameryki Południowej mają najniższe wartości we wszystkich trendach, co pokazuje strukturalne problemy społeczno-ekonomiczne przekładające się na nierówności edukacyjne.
-W niektórych krajach występuje rozbieżność między wskaźnikami, np. wysoki status zawodowy rodziców nie zawsze idzie w parze z wyposażeniem domów edukacyjnie (np. kraje Europy).
+Dodatnia wartość wskaźnika (`I > 0`) oznacza, że podobne wartości (np. wysoki status ESCS) grupują się, tworząc klastry. Wartość ujemna (`I < 0`) wskazuje na grupowanie się wartości niepodobnych (wzorzec szachownicy), a wartość bliska zeru sugeruje brak wzorca przestrzennego. Istotność statystyczna wyniku (p-value) potwierdza, czy zaobserwowany wzorzec jest dziełem przypadku.
 
-ESCS dobrze oddaje ogólny poziom, ale analiza komponentów (HISEI, HOMEPOS, PAREDINT) pozwala lepiej zrozumieć źródła różnic między krajami.
-
-
-
-# wspolczynnik moran
-
-```{r}
+```{r echo=FALSE, warning=FALSE}
 # wspolrzedne geograficzne
 country_data <- dane %>%
   group_by(cnt) %>%
@@ -479,11 +588,10 @@ merged_data <- merge(country_data, country_coords, by = "cnt", all.x = TRUE)
 merged_data <- na.omit(merged_data)  
 ```
 
-
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 coords <- cbind(merged_data$lon, merged_data$lat)
 
-# na zajeciach byly wojewodztwa i ich granice tutaj idk jak ustalic inaczej te granice miedzy krajami ?
+# na zajeciach byly wojewodztwa i ich granice tutaj idk jak ustalic inaczej te granice miedzy krajami ? tak jest dobrze, nie zmieniałem
 nb <- knn2nb(knearneigh(coords, k = 3)) 
 lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
 
@@ -491,85 +599,155 @@ lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
 merged_data$escs_trend <- as.numeric(merged_data$escs_trend)
 #sum(is.na(merged_data$escs_trend))
 moran_test <- moran.test(merged_data$escs_trend, lw, zero.policy = TRUE)
-print(moran_test)
+
+# Moran Tabelka
+wyniki_tabelka <- tidy(moran_test)
+
+# Zmiana nazw kolumn
+wyniki_tabelka <- wyniki_tabelka %>%
+  select(statistic, p.value, estimate1, estimate2) %>%
+  rename(
+    "Statystyka I Morana" = estimate1,
+    "Wartość oczekiwana" = estimate2,
+    "Statystyka testowa (z)" = statistic,
+    "P-value" = p.value
+  )
+
+# Tabelka HTML
+kable(wyniki_tabelka, digits = 6, caption = "Wyniki testu globalnej autokorelacji I Morana") %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
+
+
 ```
 
-Wartość statystyki Moran's I = 0.326
-Kraje o podobnych wartościach escs_trend (statusie społeczno-ekonomicznym uczniów) grupują się blisko siebie.
-Np: Jeśli Polska ma wysokie escs_trend, to jej sąsiedzi (Niemcy, Czechy) też prawdopodobnie mają wysokie wartości.
+### Interpretacja wyników testu I Morana
 
+Wyniki testu jednoznacznie wskazują na istnienie globalnej autokorelacji przestrzennej. Obliczona wartość **statystyki I Morana wyniosła 0.326**, co jest wartością dodatnią, świadczącą o tendencji do grupowania się podobnych wartości w przestrzeni. Oznacza to, że kraje o podobnym średnim statusie społeczno-ekonomicznym uczniów (`escs_trend`) mają tendencję do występowania blisko siebie, tworząc regionalne skupiska.
 
-p-value = 4.645e-05 (<< 0.05)
-Wynik jest wysoce istotny statystycznie – odrzucamy hipotezę zerową o braku autokorelacji przestrzennej. Możemy zatem rozważać modele przestrzenne. 
+Zaobserwowany wzorzec jest **wysoce istotny statystycznie**, o czym świadczy p-value na poziomie `4.6e-05`, które jest znacznie niższe od standardowego progu istotności α=0.05. W związku z tym, **odrzucamy hipotezę zerową** o losowym rozkładzie przestrzennym analizowanego zjawiska.
 
+Stwierdzenie istnienia globalnej autokorelacji uzasadnia dalsze, bardziej szczegółowe badanie w celu zidentyfikowania lokalizacji konkretnych klastrów za pomocą lokalnych statystyk (LISA).
 
-Standard deviate = 3.9084
-Wartość statystyki jest prawie 4 odchylenia standardowe powyżej oczekiwań (Expectation = -0.015), co potwierdza silny wzorzec przestrzenny.
+## Lokalne wskaźniki autokorelacji przestrzennej (LISA)
 
-Status społeczno-ekonomiczny uczniów nie jest rozłożony losowo – istnieją wyraźne regionalne wzorce.
+Test I Morana potwierdził istnienie globalnej autokorelacji przestrzennej, co oznacza, że dane nie są rozmieszczone losowo. Jednakże, jako wskaźnik globalny, nie informuje on, *w których konkretnie miejscach* występują skupiska.
 
-Możemy zobaczy czy klastry pokrywają się z podziałem na kraje OECD np zy kraje OECD mają wyższe escs_trend i grupują się razem.obliczenie lokalnego moran'a (LISA)
+Aby zidentyfikować lokalizację tych wzorców, przechodzimy do analizy **Lokalnych Wskaźników Autokorelacji Przestrzennej (LISA)**. Analiza ta "rozkłada" globalną statystykę na poszczególne jednostki (w naszym przypadku – kraje), obliczając dla każdej z nich lokalną miarę podobieństwa do jej sąsiadów.
 
+Celem analizy LISA jest zidentyfikowanie statystycznie istotnych klastrów przestrzennych oraz obserwacji odstających. Pozwala to na sklasyfikowanie każdego kraju do jednej z czterech kategorii:
 
-# wspolczynnik LISA
+-   **Wysoki-Wysoki (High-High):** Kraj o wysokiej wartości otoczony przez sąsiadów o również wysokich wartościach (tzw. gorąca plama - *hot spot*).
 
+-   **Niski-Niski (Low-Low):** Kraj o niskiej wartości otoczony przez sąsiadów o niskich wartościach (tzw. zimna plama - *cold spot*).
 
-```{r}
+-   **Wysoki-Niski (High-Low):** Kraj o wysokiej wartości otoczony przez sąsiadów o niskich wartościach (przestrzenna obserwacja odstająca).
 
+-   **Niski-Wysoki (Low-High):** Kraj o niskiej wartości otoczony przez sąsiadów o wysokich wartościach (przestrzenna obserwacja odstająca).
+
+W tej części projektu zwizualizujemy wyniki analizy LISA na mapie, aby wskazać konkretne regiony świata tworzące klastry.
+
+```{r analiza-lisa, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+
+# Obliczenie lokalnych statystyk Morana
 local_moran <- localmoran(merged_data$escs_trend, lw, zero.policy = TRUE)
-merged_data$Ii <- local_moran[, 1]      # lokalny wskaźnik Morana
-merged_data$P.Ii <- local_moran[, 5]    # p-value
 
+# Kolumna OECD
 oecd_iso3 <- c(
   "AUS", "AUT", "BEL", "CAN", "CHL", "COL", "CZE", "DNK", "EST", "FIN", 
   "FRA", "DEU", "GRC", "HUN", "ISL", "IRL", "ISR", "ITA", "JPN", "KOR", 
   "LVA", "LTU", "LUX", "MEX", "NLD", "NZL", "NOR", "POL", "PRT", "SVK", 
   "SVN", "ESP", "SWE", "CHE", "TUR", "GBR", "USA"
 )
-
 merged_data$oecd <- ifelse(merged_data$cnt %in% oecd_iso3, "OECD", "non-OECD")
+# ----------------------------------------------------------------
 
-# 4. Szybka analiza: jakie kraje są w istotnych klastrach?
-# Załóżmy, że interesują nas istotne klastry dodatnie (HH i LL)
-merged_data$cluster_type <- NA
-merged_data$cluster_type[merged_data$Ii > 0 & merged_data$P.Ii < 0.05] <- "HH or LL"
-merged_data$cluster_type[merged_data$Ii < 0 & merged_data$P.Ii < 0.05] <- "Outlier"
+# Klasyfikacja klastrów
+merged_data$std_escs <- scale(merged_data$escs_trend)
+merged_data$lag_std_escs <- lag.listw(lw, merged_data$std_escs, zero.policy = TRUE)
+merged_data$p_value <- local_moran[, 5]
 
-# 5. Czy OECD są nadreprezentowane w klastrach?
-table(merged_data$oecd, merged_data$cluster_type)
+merged_data <- merged_data %>%
+  mutate(cluster_type = case_when(
+    p_value < 0.05 & std_escs > 0 & lag_std_escs > 0   ~ "Wysoki-Wysoki (Hot Spot)",
+    p_value < 0.05 & std_escs < 0 & lag_std_escs < 0   ~ "Niski-Niski (Cold Spot)",
+    p_value < 0.05 & std_escs > 0 & lag_std_escs < 0   ~ "Wysoki-Niski (Outlier)",
+    p_value < 0.05 & std_escs < 0 & lag_std_escs > 0   ~ "Niski-Wysoki (Outlier)",
+    TRUE                                              ~ "Niestotny statystycznie"
+  ))
 
-#merged_data[merged_data$cluster_type == "HH or LL", c("cnt", "oecd", "escs_trend", "Ii", "P.Ii")]
+#Tabela
+tabela_lisa_long <- merged_data %>%
+  count(oecd, cluster_type, name = "Liczba") %>%
+  filter(!is.na(cluster_type) & !is.na(oecd))
 
+tabela_lisa <- pivot_wider(
+  tabela_lisa_long,
+  names_from = cluster_type, 
+  values_from = Liczba, 
+  values_fill = 0
+)
+
+kable(tabela_lisa, caption = "Liczba krajów w klastrach LISA według przynależności do OECD") %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed"),
+    full_width = FALSE,
+    position = "center"
+  )
 
 ```
 
+```{r mapa-lisa, echo=FALSE, message=FALSE, warning=FALSE, fig.height=6, fig.width=10, fig.align='center'}
 
-```{r}
+# Połączenie wyników
+mapa_lisa_dane <- left_join(mapa_swiat, merged_data, by = c("iso_a3" = "cnt"))
 
-world <- ne_countries(scale = "medium", returnclass = "sf")
-map_data <- merge(world, merged_data, by.x = "iso_a3", by.y = "cnt", all.x = FALSE)
+# Kolory klastrów
+kolory_klastrow <- c(
+  "Wysoki-Wysoki (Hot Spot)" = "#FF0000",  # Czerwony
+  "Niski-Niski (Cold Spot)" = "#0000FF",   # Niebieski
+  "Wysoki-Niski (Outlier)" = "#FFBBBB",    # Jasnoczerwony
+  "Niski-Wysoki (Outlier)" = "#AAAAFF",    # Jasnoniebieski
+  "Niestotny statystycznie" = "#DDDDDD"    # Szary
+)
 
-map_data$significant <- map_data$P.Ii < 0.05
-ggplot(data = map_data) +
-  geom_sf(aes(fill = significant), color = "black", size = 0.1) +
+# Mapa
+ggplot(data = mapa_lisa_dane) +
+  geom_sf(aes(fill = cluster_type), color = "white", size = 0.1) +
   scale_fill_manual(
-    values = c("white", "red"),
-    labels = c("Nieistotne", "Istotne"),
-    name = "Istotność"
+    values = kolory_klastrow,
+    name = "Typ klastra LISA",
+    na.value = "grey95" # Kolor dla krajów bez danych
   ) +
   labs(
-    title = "Lokalna istotność statystyki Moran's I dla escs_trend",
-    subtitle = "Czerwone kraje tworzą istotne klastry wartości escs_trend"
+    title = "Mapa klastrów LISA dla wskaźnika ESCS Trend",
+    subtitle = "Identyfikacja 'gorących' i 'zimnych' plam oraz obserwacji odstających"
   ) +
-  theme_minimal()
+  theme_void() + # Używamy minimalistycznego tła dla mapy
+  theme(legend.position = "bottom")
+
 ```
 
-Czerwonym kolorem na mapie oznaczono kraje, dla których stwierdzono istotną wartość lokalnej statystyki Morana
-oznacza to, że kraje te otoczone są krajami o podobnej wartości analizowanego zjawiska
+### Interpretacja wyników analizy LISA
 
+Analiza LISA precyzyjnie identyfikuje geograficzne skupiska, potwierdzając globalną polaryzację statusu społeczno-ekonomicznego uczniów.
 
-# Estymacja klasycznego modelu OLS 
-```{r}
+Na mapie widoczny jest **klaster "Wysoki-Wysoki" (Hot Spot)** w Skandynawii, który obejmuje zamożne kraje OECD. Kontrastuje z nim duży **klaster "Niski-Niski" (Cold Spot)** w Ameryce Południowej, zdominowany przez kraje nienależące do OECD. Wskazuje to na istnienie regionalnych "pułapek" biedy i dobrobytu.
+
+Dodatkowo zidentyfikowano Chile jako **obserwację odstającą typu "Wysoki-Niski"** – kraj OECD o relatywnie wysokim statusie, otoczony przez sąsiadów o statusie niższym.
+
+Wyniki te dowodzą, że zróżnicowanie w edukacji ma silny wymiar przestrzenny, z "gorącymi plamami" w rozwiniętych regionach Europy i "zimnymi plamami" w krajach rozwijających się, co jest kluczową informacją dla dalszych analiz.
+
+# Modelowanie ekonometryczne
+
+## Estymacja klasycznego modelu OLS
+
+Rozpoczynając analizę modelowania, w pierwszym kroku estymujemy klasyczny model regresji liniowej metodą najmniejszych kwadratów (OLS). Celem jest zbadanie siły i kierunku wpływu zmiennych objaśniających na status społeczno-ekonomiczny uczniów, na razie bez uwzględniania potencjalnych efektów przestrzennych.
+
+```{r model-ols, echo=FALSE, message=FALSE, warning=FALSE}
 
 model_escs <- lm(
   escs_trend ~ hisei_trend +
@@ -577,43 +755,69 @@ model_escs <- lm(
     paredint_trend,
   data = dane
 )
-summary(model_escs)
 
-model_best_stat <- step(model_escs, direction = "backward")
-summary(model_best_stat)
+
+model_best_stat <- step(model_escs, direction = "backward", trace = 0)
+
+tabela_wspolczynnikow <- tidy(model_best_stat) %>%
+  rename(
+    "Zmienna" = term,
+    "Oszacowanie" = estimate,
+    "Błąd std." = std.error,
+    "Statystyka t" = statistic,
+    "P-value" = p.value
+  )
+
+kable(tabela_wspolczynnikow, 
+      digits = 6, 
+      caption = "Wyniki estymacji modelu OLS") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+
+tabela_dopasowania <- glance(model_best_stat) %>%
+  select(r.squared, adj.r.squared, statistic, p.value, AIC, BIC) %>% # Wybieramy kluczowe miary
+  rename(
+    "R-kwadrat" = r.squared,
+    "Skoryg. R-kwadrat" = adj.r.squared,
+    "Statystyka F" = statistic,
+    "P-value (modelu)" = p.value,
+    "AIC" = AIC,
+    "BIC" = BIC
+  )
+
+knitr::asis_output("<br>")
+
+kable(tabela_dopasowania, 
+      digits = 6, 
+      caption = "Miary dopasowania modelu OLS") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
 
 ```
 
-W celu zbadania, które czynniki mają wpływ na trend zmiennej zależnej **escs_trend** (wskaźnika społeczno-ekonomicznego uczniów),
-przeprowadzono analizę regresji liniowej, w której jako zmienne niezależne uwzględniono: 
+Wyniki estymacji modelu OLS, zaprezentowane w tabelach, wskazują na następujące kluczowe wnioski:
 
-- **hisei_trend** (poziom statusu zawodowego rodziców),
+-   **Istotność i kierunek wpływu:** Wszystkie trzy zmienne objaśniające (`homepos_trend`, `paredint_trend`, `hisei_trend`) mają **dodatni i statystycznie wysoce istotny** wpływ na status społeczno-ekonomiczny uczniów (p-value \< 0.001).
 
-- **homepos_trend** (posiadane zasoby edukacyjne w domu),
+-   **Siła poszczególnych czynników:** Zmienne różnią się siłą swojego oddziaływania, co widać po wartościach oszacowanych współczynników:
 
-- **paredint_trend** (zaangażowanie rodziców w edukację),
+-   **Najsilniejszy wpływ** ma indeks zasobów domowych (`homepos_trend`). Wzrost o 1 jednostkę wiąże się ze wzrostem ESCS średnio o **0.811**.
 
+-   **Drugi w kolejności** jest wpływ wykształcenia rodziców (`paredint_trend`), gdzie 1 jednostka przekłada się na wzrost ESCS o **0.171**.
 
-Wszystkie trzy zmienne niezależne okazały się statystycznie istotne na poziomie istotności p < 0,001.
+-   **Najmniejszy efekt** wykazuje status zawodowy rodziców (`hisei_trend`) ze współczynnikiem **0.019**.
 
-- **hisei_trend** (0,0188) – wzrost statusu zawodowego rodziców o 1 jednostkę  wiąże się ze wzrostem escs_trend średnio o 0,0188 jednostki, przy pozostałych zmiennych stałych.
+-   **Dopasowanie modelu:** Model jako całość charakteryzuje się **bardzo wysoką jakością dopasowania**. Współczynnik **R-kwadrat na poziomie 0.987** oznacza, że model wyjaśnia 98,7% zmienności statusu uczniów. Wysoka wartość statystyki F potwierdza, że cały model jest istotny statystycznie.
 
-- **homepos_trend**(0,8111) – największy wpływ na escs_trend ma liczba zasobów edukacyjnych w domu. Każda jednostka wzrostu tej zmiennej przekłada się na wzrost wskaźnika społeczno-ekonomicznego o 0,8111 jednostki.
+**Wniosek końcowy:** Klasyczny model OLS potwierdza, że kluczowymi, pozytywnymi determinantami statusu społeczno-ekonomicznego uczniów są zasoby domowe, wykształcenie rodziców i ich status zawodowy, przy czym **najważniejszą rolę odgrywają warunki materialne i dostęp do zasobów w domu**.
 
-- **paredint_trend** (0,1712) – większe zaangażowanie rodziców w edukację dziecka  również wpływa pozytywnie na escs_trend, choć w mniejszym stopniu niż homepos_trend.
+## Modelowanie przestrzenne (OLS, SAR, SEM) i porównanie modeli
 
-Model również wykazał bardzo wysokie dopasowanie do danych: 
-- **R² = 0,9868**, co oznacza, że aż 98,68% zmienności wskaźnika escs_trend można wyjaśnić za pomocą zastosowanych zmiennych niezależnych.
-- **Statystyka F= 3.62e+07** przy p < 2,2e-16 potwierdza, że model jako całość jest statystycznie istotny.
+W poprzednich rozdziałach stwierdzono istotną globalną autokorelację przestrzenną dla wskaźnika ESCS. To sugeruje, że klasyczny model OLS, który ignoruje zależności geograficzne, może być modelem błędnie wyspecyfikowanym, a jego wyniki mogą być nie w pełni wiarygodne.
 
-Analiza kryterium (AIC) wskazuje, że usunięcie którejkolwiek ze zmiennych sktutkuje  znacznym pogorszeniem dopasowania modelu (istotny wzrost RSS i AIC), co oznacza, że każda z uwzględnionych zmiennych wnosi istotną wartość informacyjną.
+Aby to formalnie zweryfikować, w tym rozdziale przeprowadzimy test I Morana na resztach z modelu OLS. Następnie, w zależności od wyniku, zbudujemy i porównamy modele uwzględniające efekty przestrzenne: model z przestrzennym opóźnieniem (SAR) oraz model błędu przestrzennego (SEM). Celem jest wybór modelu, który najlepiej opisuje analizowane zjawisko.
 
-Model regresji potwierdza, że warunki domowe, status zawodowy rodziców oraz  ich zaangażowanie w edukację dziecka mają silny i pozytywny wpływ na wskaźnik  społeczno-ekonomiczny uczniów. W szczególności zasoby edukacyjne w domu  (np. liczba książek, dostęp do internetu, miejsce do nauki) mają największe znaczenie spośród analizowanych czynników.
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-
-# Model SAR i SEM & porównanie modeli // ponowne OLS i test Morana
-```{r}
-
+# Przygotowanie danych zagregowanych
 country_data <- dane %>%
   group_by(cnt) %>%
   summarise(
@@ -623,7 +827,7 @@ country_data <- dane %>%
     paredint_trend = mean(paredint_trend, na.rm = TRUE)
   )
 
-world_map <- getMap(resolution = "low")
+world_map <- rworldmap::getMap(resolution = "low")
 country_coords <- data.frame(
   cnt = world_map@data$ISO3,
   lon = coordinates(world_map)[, 1],
@@ -633,19 +837,16 @@ country_coords <- data.frame(
 merged_data <- merge(country_data, country_coords, by = "cnt", all.x = FALSE)
 merged_data <- na.omit(merged_data)  
 
-
+# Tworzenie macierzy wag
 coords <- cbind(merged_data$lon, merged_data$lat)
 nb <- knn2nb(knearneigh(coords, k = 3))
 lw <- nb2listw(nb, style = "W", zero.policy = TRUE)
 
-
+# Estymacja modeli
 ols_model <- lm(
   escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
   data = merged_data
 )
-summary(ols_model)
-
-moran.test(residuals(ols_model), lw, zero.policy = TRUE)
 
 sar_model <- lagsarlm(
   escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
@@ -654,8 +855,6 @@ sar_model <- lagsarlm(
   method = "eigen",
   zero.policy = TRUE
 )
-summary(sar_model)
-
 
 sem_model <- errorsarlm(
   escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
@@ -664,16 +863,60 @@ sem_model <- errorsarlm(
   method = "eigen",
   zero.policy = TRUE
 )
-summary(sem_model)
 
-AIC(ols_model, sar_model, sem_model)
+# Estymacja testu Morana
+moran_reszt_test <- moran.test(residuals(ols_model), lw, zero.policy = TRUE)
+
+# Tworzenie tabeli
+tidy(moran_reszt_test) %>%
+  select("Statystyka I Morana" = estimate1, "P-value" = p.value) %>%
+  kable(digits = 6, caption = "Test autokorelacji przestrzennej reszt z modelu OLS") %>%
+  kable_styling(bootstrap_options = "striped", full_width = FALSE, position = "center")
+
+knitr::asis_output("<br>")
+
+
+# Tworzenie tabeli porównującej współczynniki modeli
+
+# Wyciągnięcie wyników z każdego modelu za pomocą tidy()
+tabela_ols <- tidy(ols_model) %>% mutate(Model = "OLS")
+tabela_sar <- tidy(sar_model) %>% mutate(Model = "SAR")
+tabela_sem <- tidy(sem_model) %>% mutate(Model = "SEM")
+
+# Połączenie wyników w jedną tabelę
+tabela_porownawcza <- bind_rows(tabela_ols, tabela_sar, tabela_sem) %>%
+  select(Model, Zmienna = term, Oszacowanie = estimate, `P-value` = p.value) %>%
+  filter(Zmienna != "Wald.Sarlm") # Usunięcie zbędnego wiersza z testu Walda
+
+# Stworzenie sformatowanej tabeli porównawczej
+kable(tabela_porownawcza, 
+      digits = 6, 
+      caption = "Porównanie oszacowań współczynników w modelach OLS, SAR i SEM") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center") %>%
+  # Złączenie wierszy dla tej samej nazwy modelu, aby tabela była bardziej czytelna
+  collapse_rows(columns = 1, valign = "top")
+
+knitr::asis_output("<br>")
+
+# Tworzenie tabeli porównującej dopasowanie modeli
+
+# Wywołanie AIC() i przekształcenie wyniku na ramkę danych
+tabela_aic <- AIC(ols_model, sar_model, sem_model) %>%
+  tibble::rownames_to_column("Model") # Dodanie nazw modeli jako kolumny
+
+# Stworzenie sformatowanej tabeli AIC
+kable(tabela_aic, 
+      digits = 6, 
+      caption = "Porównanie dopasowania modeli za pomocą kryterium informacyjnego AIC") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+
 
 
 ```
 
 W analizie wykorzystano dane z 68 krajów, dla których dostępne były kompletne informacje nt. zmiennych objaśniających **(hisei_trend, homepos_trend, paredint_trend)** oraz współrzędnych geograficznych **(lon, lat)**. Kraje (3) z brakami zostały usunięte, aby zapewnić pełną spójność wszystkich estymowanych modeli.
 
-Model OLS został ponownie oszacowany na tym samym zestawie danych, co modele przestrzenne, aby umożliwić bezpośrednie porównanie ich dopasowania (AIC)  i zapewnić porównywalność wyników.
+Model OLS został ponownie oszacowany na tym samym zestawie danych, co modele przestrzenne, aby umożliwić bezpośrednie porównanie ich dopasowania (AIC) i zapewnić porównywalność wyników.
 
 Model klasyczny (OLS) wykazał, że wszystkie trzy zmienne objaśniające miały pozytywny i statystycznie istotny wpływ na **escs_trend**, co oznacza, że wyższy status zawodowy rodziców **(hisei_trend)**, lepsze zasoby edukacyjne w domu **(homepos_trend)** oraz wyższy poziom wykształcenia rodziców **(paredint_trend)** wiążą się z wyższym statusem społeczno-ekonomicznym uczniów. Model cechował się bardzo wysokim dopasowaniem **(R² = 0.9994)**, co sugeruje niemal pełne wyjaśnienie zmienności zmiennej zależnej.
 
@@ -681,37 +924,224 @@ Test Morana dla reszt modelu OLS (I = -0.05, p = 0.69) nie wykazał istotnej aut
 
 Niemniej jednak, oszacowano również modele SAR (z opóźnieniem przestrzennym) i SEM (z błędem przestrzennym) w celu weryfikacji, czy uwzględnienie komponentów przestrzennych wpłynie na dopasowanie modelu. W obu przypadkach współczynniki przestrzenne okazały się statystycznie nieistotne:
 
- - **SAR**: rho = -0.001, p = 0.83
+-   **SAR**: rho = -0.001, p = 0.83
 
- - **SEM**: lambda = -0.083, p = 0.62
+-   **SEM**: lambda = -0.083, p = 0.62
 
 Co więcej, porównanie wartości AIC wykazało, że model OLS (AIC = -388.03) miał lepsze dopasowanie niż modele SAR (AIC = -386.08) i SEM (AIC = -386.32).
 
 Ostatecznie, modele przestrzenne nie wniosły dodatkowej wartości względem klasycznego OLS, a zależności między krajami w kontekście zmiennej **escs_trend** można wyjaśnić bez potrzeby uwzględniania efektów przestrzennych.
 
-# Model Durbina
-```{r}
+## Model Durbina
+
+Model Durbin (SDM) został wykorzystany jako rozszerzenie modelu SAR. Uwzględnia on nie tylko wpływ przestrzennego opóźnienia zmiennej zależnej, ale też sprawdza, czy wartości zmiennych objaśniających w sąsiednich krajach mają znaczenie dla poziomu **escs_trend**.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 sdm_model <- lagsarlm(
   escs_trend ~ hisei_trend + homepos_trend + paredint_trend,
   data = merged_data,
   listw = lw,
-  type = "mixed",         
+  type = "mixed", # 'mixed' to specyfikacja dla modelu Durbina w tym pakiecie
   method = "eigen",
   zero.policy = TRUE
 )
 
-summary(sdm_model)
+# Tworzenie tabeli ze współczynnikami modelu
 
+tabela_sdm_wspolczynniki <- tidy(sdm_model) %>%
+  rename(
+    "Zmienna" = term,
+    "Oszacowanie" = estimate,
+    "Błąd std." = std.error,
+    "Statystyka z" = statistic, # Dla modeli sarlm używamy statystyki 'z'
+    "P-value" = p.value
+  )
+
+kable(tabela_sdm_wspolczynniki, 
+      digits = 4, 
+      caption = "Wyniki estymacji przestrzennego modelu Durbina (SDM)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+
+knitr::asis_output("<br>")
+
+# Tworzenie tabeli z miarami dopasowania modelu
+
+# Obliczamy Pseudo R-kwadrat jako kwadrat korelacji między wartościami
+# obserwowanymi (sdm_model$y) a dopasowanymi przez model (fitted(sdm_model))
+pseudo_r_kwadrat <- cor(sdm_model$y, fitted(sdm_model))^2
+
+tabela_sdm_dopasowanie <- data.frame(
+    "Logarytm wiarygodności" = logLik(sdm_model)[1],
+    "AIC" = AIC(sdm_model),
+    "Pseudo R-kwadrat" = pseudo_r_kwadrat[1] # Używamy [1], aby upewnić się, że to pojedyncza liczba
+)
+
+kable(tabela_sdm_dopasowanie, 
+      digits = 4, 
+      caption = "Miary dopasowania modelu Durbina (SDM)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
 ```
-Model Durbin (SDM) został wykorzystany jako rozszerzenie modelu SAR. Uwzględnia on nie tylko wpływ przestrzennego opóźnienia zmiennej zależnej, ale też sprawdza, czy wartości zmiennych objaśniających w sąsiednich krajach mają znaczenie dla poziomu **escs_trend**.
 
-Wyniki pokazały, że wszystkie lokalne zmienne – **hisei_trend** (β = 0.0191), **homepos_trend** (β = 0.8023) i **paredint_trend** (β = 0.1709) – miały pozytywny i istotny wpływ na **escs_trend** (p < 0.001). Z kolei ich przestrzenne odpowiedniki, np. **lag.homepos_trend** (β = 0.0505, p = 0.70), nie były istotne statystycznie. To znaczy, że sytuacja w krajach sąsiednich raczej nie wpływa na poziom ESCS.
+Wyniki modelu Durbina (SDM) potwierdziły, że wszystkie lokalne zmienne – `hisei_trend` (β = 0.019), `homepos_trend` (β = 0.802) i `paredint_trend` (β = 0.171) – mają pozytywny i wysoce istotny statystycznie wpływ na `escs_trend`.
 
-Także współczynnik rho, który mierzy przestrzenne zależności w zmiennej zależnej, nie był istotny (rho = -0.086, p = 0.61).
+Jednocześnie model nie wykazał żadnych istotnych efektów przestrzennych. Zarówno współczynnik `rho` (p = 0.61), mierzący wpływ statusu sąsiadów, jak i przestrzenne opóźnienia zmiennych objaśniających (np. `lag.homepos_trend`, p = 0.70) okazały się nieistotne. Oznacza to, że sytuacja w krajach sąsiednich nie ma mierzalnego wpływu na poziom ESCS w danym kraju.
 
-Model Durbin miał wyższy AIC (-382.29) niż klasyczny model OLS (-388.03), co oznacza, że był trochę gorzej dopasowany.
+Porównanie kryterium informacyjnego AIC również nie przemawia na korzyść bardziej złożonego modelu. Wartość AIC dla modelu Durbina (-382.3) jest wyższa niż dla klasycznego modelu OLS, co wskazuje na jego gorsze dopasowanie po uwzględnieniu liczby parametrów.
 
-Nie znaleziono zatem dowodów na to, że czynniki przestrzenne wpływają na poziom **escs_trend**. Lepiej sprawdza się zwykła regresja, oparta tylko na lokalnych danych z danego kraju.
+W związku z powyższym, nie znaleziono dowodów uzasadniających stosowanie złożonych modeli przestrzennych. Zgodnie z zasadą parsymonii, w tym przypadku preferowany jest prostszy model OLS, oparty wyłącznie na wewnętrznych charakterystykach danego kraju.
 
+# Ocena modelu
 
+Po estymacji trzech konkurencyjnych modeli – klasycznego modelu OLS, modelu z opóźnieniem przestrzennym (SAR) oraz modelu błędu przestrzennego (SEM) – przeprowadzono ich ocenę w celu wyboru tego, który najlepiej opisuje analizowane zjawisko.
+
+## Testy autokorelacji reszt
+
+Kluczowym kryterium oceny modelu OLS w kontekście danych przestrzennych jest sprawdzenie, czy w jego resztach nie pozostała żadna niewyjaśniona struktura przestrzenna. W tym celu wykonano test I Morana dla reszt modelu.
+
+```{r test-morana-reszt2, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# Wymagane biblioteki
+library(broom)
+library(kableExtra)
+library(dplyr)
+
+# Uwaga: Ten chunk zakłada, że obiekty 'ols_model' i 'lw' zostały stworzone
+# w poprzednim chunku z estymacją modeli.
+
+# Estymacja testu Morana dla reszt modelu OLS
+moran_reszt_test <- moran.test(residuals(ols_model), lw, zero.policy = TRUE)
+
+# Tworzenie sformatowanej tabeli z wynikami
+tidy(moran_reszt_test) %>%
+  select("Statystyka I Morana" = estimate1, "P-value" = p.value) %>%
+  kable(digits = 4, caption = "Test autokorelacji przestrzennej reszt z modelu OLS") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+```
+
+### **Interpretacja testu autokorelacji reszt**
+
+Kluczowym założeniem poprawności modelu OLS w analizie przestrzennej jest brak autokorelacji w jego resztach. W celu weryfikacji tego założenia, przeprowadzono test I Morana.
+
+Wyniki testu, przedstawione w tabeli, wskazują, że wartość **statystyki I Morana dla reszt wyniosła -0.051**, co jest wartością bardzo bliską zeru. Co najważniejsze, uzyskana **wartość p-value (0.695)** jest znacznie wyższa od standardowego progu istotności α=0.05.
+
+Oznacza to, że **nie ma podstaw do odrzucenia hipotezy zerowej** o braku autokorelacji przestrzennej. W resztach modelu OLS nie występuje żadna istotna statystycznie struktura przestrzenna. Wynik ten silnie sugeruje, że klasyczny model OLS może być wystarczający do opisu analizowanego zjawiska, a stosowanie bardziej skomplikowanych modeli przestrzennych (jak SAR czy SEM) może nie być konieczne.
+
+## Porównanie dopasowania modeli
+
+W celu porównania jakości dopasowania poszczególnych modeli do danych empirycznych, wykorzystano kryterium informacyjne Akaike (AIC). Zgodnie z tą metodą, model o niższej wartości AIC jest uznawany za lepiej dopasowany, uwzględniając kompromis między jakością dopasowania a liczbą estymowanych parametrów.
+
+```{r porownanie-aic2, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+# Wymagane biblioteki
+library(kableExtra)
+library(tibble)
+
+# Uwaga: Ten chunk zakłada, że obiekty 'ols_model', 'sar_model' i 'sem_model'
+# zostały stworzone w poprzednim chunku.
+
+# Wywołanie AIC() i przekształcenie wyniku na ramkę danych
+tabela_aic <- AIC(ols_model, sar_model, sem_model) %>%
+  tibble::rownames_to_column("Model") # Dodanie nazw modeli jako kolumny
+
+# Stworzenie sformatowanej tabeli AIC
+kable(tabela_aic,
+      digits = 2,
+      caption = "Porównanie dopasowania modeli (kryterium AIC)") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE, position = "center")
+```
+
+### Interpretacja porównania modeli (kryterium AIC)
+
+W celu wyboru najlepszego modelu spośród estymowanych wariantów (OLS, SAR, SEM), porównano ich wartości **kryterium informacyjnego Akaike (AIC)**. Kryterium to pozwala ocenić jakość modelu, uwzględniając kompromis między stopniem dopasowania do danych a jego złożonością (liczbą parametrów). Model o niższej wartości AIC jest uznawany za lepszy.
+
+Jak przedstawiono w tabeli, **klasyczny model OLS uzyskał najniższą wartość AIC, wynoszącą -388.03**. Modele przestrzenne SAR i SEM uzyskały wyższe (czyli gorsze) wartości, odpowiednio -386.08 i -386.32.
+
+Wniosek ten jest jednoznaczny: mimo że modele przestrzenne uwzględniają dodatkowe parametry, nie poprawiają one dopasowania do danych w stopniu, który uzasadniałby ich większą złożoność. Na podstawie tego kryterium, **model OLS jest preferowanym i najbardziej optymalnym wyborem** do opisu analizowanego zjawiska.
+
+## Ocena statystyczna i ekonomiczna oraz wybór finalnego modelu
+
+Biorąc pod uwagę przedstawione wyniki, jako finalny model wybrano **klasyczny model OLS**. Decyzja ta została poparta przez następujące argumenty:
+
+1.  **Brak autokorelacji przestrzennej reszt:** Test I Morana nie wykazał istotnej autokorelacji w resztach modelu OLS, co sugeruje, że model ten poprawnie wychwycił strukturę danych bez potrzeby uwzględniania efektów przestrzennych.
+
+2.  **Najlepsze dopasowanie (kryterium AIC):** Model OLS uzyskał najniższą wartość wskaźnika AIC spośród wszystkich porównywanych modeli, co świadczy o jego najlepszym dopasowaniu do danych.
+
+3.  **Brak istotności parametrów przestrzennych:** Zarówno w modelu SAR (parametr `rho`), jak i w modelu SEM (parametr `lambda`), współczynniki przestrzenne okazały się statystycznie nieistotne, co oznacza, że nie wniosły one istotnej informacji do modelu.
+
+Zgodnie z zasadą parsymonii (oszczędności), która nakazuje wybór najprostszego modelu dobrze opisującego rzeczywistość, model OLS jest w tym przypadku wyborem najbardziej uzasadnionym.
+
+# Wnioski i rekomendacje
+
+## Kluczowe czynniki wpływające na **ESCS Trend**
+
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Zmienna (skala)                                        | Współczynnik (OLS) | Interpretacja                                                                                                                                                                                                            |
++========================================================+====================+==========================================================================================================================================================================================================================+
+| **homepos_trend** (≈ –1 ÷ +3)                          | +0.79              | Najsilniejszy efekt: wzrost o 1 pkt w indeksie zasobów domowych podnosi średni ESCS o \~0,8 pkt. To sugeruje, że wyposażenie domu – komputery, książki, miejsce do nauki – jest kluczowym czynnikiem wyrównywania szans. |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **paredint_trend** (lata ukończonej edukacji rodziców) | +0.17              | Wyższe wykształcenie rodziców (szczególnie matki) przekłada się na lepszy status społeczno-ekonomiczny uczniów, choć słabiej niż zasoby materialne.                                                                      |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **hisei_trend** (status zawodowy rodziców)             | +0.02              | Sam status zawodowy ma istotny, ale najmniejszy wpływ w porównaniu z innymi zmiennymi – w dużej mierze działa pośrednio poprzez dochody i poziom wykształcenia.                                                          |
++--------------------------------------------------------+--------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+*Model wyjaśnia aż 99,9 % zmienności ESCS (R² = 0,999), jednak tak wysoka wartość przy 68 obserwacjach sygnalizuje potencjalne problemy z kolinearnością i agregacją (średnie krajowe).*
+
+## Znaczenie efektów przestrzennych
+
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| Test / model                           | Statystyka | p-value   | Wniosek                                                                   |
++========================================+============+===========+===========================================================================+
+| **Global Moran’s I** dla reszt OLS     | –0.05      | 0.69      | Brak globalnej autokorelacji przestrzennej – reszty zachowują się losowo. |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **SAR (lag)** ρ                        | –0.001     | 0.83      | Nieistotny efekt zależności sąsiedzkiej między poziomami ESCS.            |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **SEM (error)** λ                      | –0.083     | 0.59      | Brak istotnego błędu przestrzennego.                                      |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+| **Mixed SAR** – parametry lagowanych X | nieistotne | \>0.39    | Brak przestrzennych spill-over dla zmiennych objaśniających.              |
++----------------------------------------+------------+-----------+---------------------------------------------------------------------------+
+
+**W praktyce**: na poziomie uśrednionym dla państw efekty przestrzenne są znikome. Lokalna statystyka Moran’a pokazuje jedynie kilka niewielkich klastrów (np. **Brazylia** i **Szwecja**), ale nie przekłada się to na istotną strukturę w modelu regresji.
+
+## Implikacje dla polityki publicznej i decyzji lokalnych
+
++---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Obszar działania                                              | Rekomendacje                                                                                                                                                      |
++===============================================================+===================================================================================================================================================================+
+| **Inwestycje w środowisko domowe**                            | • Programy doposażenia gospodarstw o niskich dochodach w komputery, internet, książki i przestrzeń do nauki.\                                                     |
+|                                                               | • Wspieranie bibliotek szkolnych i publicznych w małych gminach.                                                                                                  |
++---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Edukacja dorosłych**                                        | • Zachęty (stypendia, elastyczne formy kształcenia) dla rodziców do podnoszenia kwalifikacji, zwłaszcza w kraju/kraju-regionach z niskim średnim wykształceniem.\ |
+|                                                               | • Kampanie informacyjne podkreślające wpływ edukacji rodziców na szanse dzieci.                                                                                   |
++---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Rynek pracy**                                               | • Polityki podnoszące stabilność zatrudnienia i wynagrodzenia w zawodach o niskim prestiżu mogą pośrednio poprawiać ESCS, choć efekt jest bardziej ograniczony    |
++---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Brak konieczności uwzględniania zależności przestrzennych** | • Przy kształtowaniu strategii krajowych wystarczy klasyczna analiza – sąsiedztwo geograficzne państw nie odgrywa znaczącej roli.\                                |
+|                                                               | • Skupienie na wewnętrznym zróżnicowaniu (regiony, powiaty, szkoły), gdzie przestrzenne zależności mogą być silniejsze.                                           |
++---------------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+
+## Ograniczenia danych i metod
+
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| Kategoria                   | Ograniczenie                                                                                                          | Konsekwencje / możliwe ulepszenia                                                                   |
++=============================+=======================================================================================================================+=====================================================================================================+
+| **Agregacja**               | Użyto **średnich krajowych** – zanika zróżnicowanie wewnętrzne; n = 68 jest małe dla 4-parametrowego modelu.          | • Pracować na mikro-danych uczniów lub co najmniej poziomie regionów (NUTS 2/3).                    |
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| **Kolinearność**            | Korelacje Homepos-Escs (0,78), Escs-Hisei (0,77), Escs-Paredint (0,82) – wskazują na częściową redundancję zmiennych. | • Sprawdzić VIF, rozważyć PCA lub regularizację (Ridge/Lasso).                                      |
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| **Rozkłady zmiennych**      | Widoczna **silna wielomodalność** (hisei_trend) oraz skupienie na wartościach krańcowych (paredint_trend).            | • Użyć modeli odpornych na odstające obserwacje (robust regression) lub transformacji (np. spline). |
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| **Specyfikacja sąsiedztwa** | k-NN = 3 tworzy 4 pod-grafy; może nie oddawać realnych relacji między krajami.                                        | • Przetestować macierze oparte na odległości geograficznej lub handlu/migracjach.                   |
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+| **Jednorazowy przekrój**    | Brak dynamiki – „trend” to indeks scalony, ale nie obserwacje panelowe w czasie.                                      | • Budować panele wielo-falowe lub pseudo-panels dla lepszego wnioskowania przyczynowego             |
++-----------------------------+-----------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------+
+
+## Podsumowanie
+
+1.  **Zasoby domowe** są najważniejszym, łatwo poddającym się interwencji czynnikiem poprawy statusu społeczno-ekonomicznego uczniów.
+
+2.  **Wykształcenie rodziców** i **status zawodowy** również pomagają, lecz ich wpływ jest po części zależny od materialnych warunków w domu.
+
+3.  **Efekty przestrzenne** na poziomie krajowym są pomijalne – różnice wynikają głównie z czynników wewnętrznych, a nie z geograficznego „rozlewania się” dobrobytu.
+
+4.  Dla **polityk publicznych** kluczowe są programy wyrównywania wyposażenia edukacyjnego gospodarstw domowych i wzmacniania kapitału ludzkiego rodziców.
+
+5.  **Ograniczenia** (mała próba, agregacja, kolinearność) sugerują ostrożność w uogólnianiu i potrzebę dalszych badań z mikro-danymi oraz alternatywnymi metodami ekonometrycznymi.
