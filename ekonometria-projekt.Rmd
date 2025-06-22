@@ -3,12 +3,6 @@ title: "Analiza przestrzennego zróżnicowania statusu społeczno-ekonomicznego 
 author: "Izabela Reszka, Klaudia Woźniak, Piotr Wiśniewski"
 date: "`r format(Sys.Date(), '%d.%m.%Y')`"
 output:
-  pdf_document:
-    latex_engine: xelatex
-    number_sections: true
-    toc: true
-    toc_depth: 2
-    fig_caption: true
   html_document:
     theme: cerulean
     highlight: tango
@@ -17,6 +11,12 @@ output:
     toc_float: true # Pływający spis treści w HTML
     number_sections: true
     code_folding: hide
+  pdf_document:
+    latex_engine: xelatex
+    number_sections: true
+    toc: true
+    toc_depth: 2
+    fig_caption: true
 # Uwaga: poniższe opcje wymagają zaawansowanej konfiguracji LaTeX
 # includes:
 #   in_header: header.tex
@@ -38,6 +38,7 @@ knitr::opts_chunk$set(
 ```{r Biblioteki, message=FALSE, warning=FALSE}
 library(dplyr)
 library(ggplot2)
+library(xfun)
 library(tidyverse)
 library(kableExtra)
 library(naniar)
@@ -57,6 +58,8 @@ library(readxl)
 library(spatialreg)
 library(standardize)
 library(broom)
+library(gganimate)
+library(gifski)
 ```
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
@@ -162,6 +165,42 @@ Kluczowym elementem przygotowania danych do analizy jest zapewnienie ich wysokie
 #### Braki danych
 
 Pierwszym krokiem weryfikacji jakości zbioru jest ocena jego kompletności. Poniższa analiza przedstawia skalę oraz rozkład braków danych dla kluczowych zmiennych uwzględnionych w badaniu.
+```{r top6_według_hisei-animacja, message=FALSE, warning=FALSE}
+
+dane_long <- dane %>%
+  pivot_longer(cols = c(hisei_trend, escs_trend, homepos_trend, paredint_trend),
+               names_to = "wskaźnik", values_to = "wartość") %>%
+  mutate(cycle = as.numeric(cycle)) %>%
+  group_by(cnt, cycle, wskaźnik) %>%
+  summarise(średnia = mean(wartość, na.rm = TRUE)) %>%
+  ungroup()
+
+# wybór top 6 krajów wg HISEI
+top_kraje <- dane_long %>%
+  filter(wskaźnik == "hisei_trend", cycle == max(cycle)) %>%
+  slice_max(order_by = średnia, n = 6) %>%
+  pull(cnt)
+
+dane_top <- dane_long %>%
+  filter(cnt %in% top_kraje)
+
+# Wykresy liniowe dla wybranych krajów
+p <- ggplot(dane_top, aes(x = cycle, y = średnia, group = cnt, color = cnt)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~ wskaźnik, scales = "free_y") +
+  labs(title = "Zmiany wskaźników społeczno-ekonomicznych (TOP 6 krajów wg HISEI)",
+       subtitle = "Cykl badania: {frame_along}",
+       x = "Cykl PISA",
+       y = "Średnia wartość") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom") +
+  transition_reveal(cycle)
+
+# Tworzenie animacji, tj. gifa
+animate(p, duration = 6, fps = 10, width = 900, height = 600,
+        renderer = gifski_renderer("top6_kraje_animacja.gif"))
+
+```
 
 ```{r plot-missing-summary, echo=FALSE, message=FALSE, warning=FALSE}
 # Podsumowanie braków danych
