@@ -391,6 +391,7 @@ Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos
 
 Uzupełnieniem numerycznej analizy statystyk opisowych jest wizualna eksploracja danych. Wykresy pozwalają na bardziej intuicyjne zrozumienie kształtu rozkładów poszczególnych zmiennych oraz na zbadanie potencjalnych zależności między nimi. W tej części zaprezentowano serię wizualizacji, aby kompleksowo zobrazować strukturę danych.
 
+
 #### Wykresy liniowe
 
 W celu bardziej szczegółowego zobrazowania zmian wskaźników społeczno-ekonomicznych w czasie, zdecydowaliśmy się wybrać 6 krajów o najwyższej średniej wartości zmiennej **hisei_trend**  w ostatnim cyklu badania PISA. Wybór ten pozwala skupić się na krajach, w których uczniowie osiągają najwyższe wskaźniki w tym zakresie, co może być związane z wysokim poziomem wykształcenia i prestiżu zawodowego rodziców.
@@ -408,7 +409,7 @@ Zastosowaliśmy wykresy liniowe, przedstawiające średnie wartości czterech zm
 
 **Wybrane kraje (TOP 6 wg HISEI w ostatnim cyklu):**  
 
-Singapur (SGP), Norwegia (NOR), Katar (QAT), Islandia (ISL), Izrael (ISR), Zjednoczone Emiraty Arabskie (ARE)
+Singapur **(SGP)**, Norwegia **(NOR)**, Katar **(QAT)**, Islandia **(ISL)**, Izrael **(ISR)**, Zjednoczone Emiraty Arabskie **(ARE)**
 
 
 **Wnioski z analizy:**
@@ -417,11 +418,14 @@ Singapur (SGP), Norwegia (NOR), Katar (QAT), Islandia (ISL), Izrael (ISR), Zjedn
 
 - `escs_trend` wykazuje niewielkie różnice pomiędzy krajami, bez gwałtownych zmian.
 
-- `homepos_trend` pokazuje istotne różnice – kraje arabskie (np. ZEA, Katar) osiągająwysokie wartości.
+- `homepos_trend` pokazuje istotne różnice – kraje arabskie (np. ZEA, Katar) osiągają wysokie wartości.
 
 - `paredint_trend` wykazuje tendencję wzrostową, szczególnie w krajach rozwiniętych jak Norwegia i Singapur.
 
+
 Wykorzystanie animacji pozwala na obserwację zmian w czasie i ułatwia porównanie trajektorii trendów między krajami.
+
+
 
 ```{r top6_według_hisei-animacja, message=FALSE, warning=FALSE,eval = interactive()}
 
@@ -469,7 +473,7 @@ knitr::include_graphics("top6_kraje_animacja.gif")
 
 #### Histogramy z wykresami gęstości
 
-Analizę wizualną rozpoczyna zbadanie rozkładu każdej kluczowej zmiennej. Poniższe wykresy łączą histogramy, obrazujące empiryczną częstość występowania wartości, z nałożonymi na nie wygładzonymi krzywymi gęstości. Taka połączona prezentacja pozwala na precyzyjną ocenę kształtu rozkładu, w tym jego symetrii, skośności oraz potencjalnej wielomodalności.
+Kolejna wizualizacja przedstawia rozkład wartości dla każdej z kluczowych zmiennych, umożliwiając ocenę ich przestrzennego zróżnicowania między krajami. Poniższe wykresy łączą histogramy, obrazujące empiryczną częstość występowania wartości, z nałożonymi na nie wygładzonymi krzywymi gęstości. Taka połączona prezentacja pozwala na precyzyjną ocenę kształtu rozkładu, w tym jego symetrii, skośności oraz potencjalnej wielomodalności.
 
 ```{r Histogram_gestosc, message=FALSE, warning=FALSE}
 
@@ -614,7 +618,7 @@ Podsumowując, wykres efektywnie ilustruje złożoną strukturę danych i dostar
 
 ### Proste mapy (kartogramy) rozkładu dla zmiennej zależnej i wybranych zmiennych objaśniających.
 
-W celu zbadania przestrzennego zróżnicowania analizowanych zjawisk, przygotowano serię kartogramów. Każda mapa przedstawia średnią wartość wybranej zmiennej na poziomie kraju, co pozwala na identyfikację globalnych wzorców i regionalnych skupisk. Zastosowana skala barw (`plasma`) przypisuje wyższym wartościom jaśniejsze kolory (żółty), a niższym – ciemniejsze (fioletowy/granatowy). Kraje bez dostępnych danych oznaczono kolorem szarym.
+W celu zbadania przestrzennego zróżnicowania analizowanych zjawisk przygotowano serię kartogramów. Każda mapa przedstawia średnią wartość wybranej zmiennej na poziomie kraju, co umożliwia identyfikację globalnych wzorców i regionalnych koncentracji. Zastosowana skala barw (`YlOrRd`) przypisuje wyższym wartościom intensywniejsze kolory (czerwony/pomarańczowy), a niższym – jaśniejsze odcienie żółtego. Kraje bez dostępnych danych oznaczono kolorem białym.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, results="FALSE"}
 dane_kraje <- dane %>%
@@ -668,13 +672,22 @@ plot_geo(dane_kraje) %>%
     locationmode = "ISO-3",
     zmin = min(dane_kraje$escs_trend, na.rm = TRUE),
     zmax = max(dane_kraje$escs_trend, na.rm = TRUE),
-    colorscale = "Plasma",
+    colorscale = "YlOrRd",
     colorbar = list(title = "Średni ESCS Trend", tickvals = ticki, ticktext = ticki)
   ) %>%
   layout(
-    title = list(text = "<b>Średni ESCS Trend w krajach</b>", x = 0.5),
-    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+  title = list(
+    text = "Średni ESCS Trend w krajach",
+    x = 0.5,
+    font = list(size = 18, family = "Arial", color = "black")
+  ),
+  margin = list(t = 80),
+  geo = list(
+    showframe = FALSE,
+    showcoastlines = TRUE,
+    projection = list(type = "natural earth")
   )
+)
 
 ```
 ```{r interaktywna_mapa_HISEI, message=FALSE, warning=FALSE}
@@ -698,13 +711,22 @@ plot_geo(dane_kraje) %>%
     locationmode = "ISO-3",
     zmin = min(dane_kraje$hisei_trend, na.rm = TRUE),
     zmax = max(dane_kraje$hisei_trend, na.rm = TRUE),
-    colorscale = "Plasma",
+    colorscale = "YlOrRd",
     colorbar = list(title = "Średni HISEI Trend", tickvals = ticki, ticktext = ticki)
   ) %>%
-  layout(
-    title = list(text = "<b>Średni HISEI Trend w krajach</b>", x = 0.5),
-    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+ layout(
+  title = list(
+    text = "Średni HISEI Trend w krajach",
+    x = 0.5,
+    font = list(size = 18, family = "Arial", color = "black")
+  ),
+  margin = list(t = 80),
+  geo = list(
+    showframe = FALSE,
+    showcoastlines = TRUE,
+    projection = list(type = "natural earth")
   )
+)
 ```
 ```{r Interaktywna_mapa_HOMEPOS, message=FALSE, warning=FALSE}
 
@@ -727,7 +749,7 @@ plot_geo(dane_kraje) %>%
     locationmode = "ISO-3",
     zmin = min(dane_kraje$homepos_trend, na.rm = TRUE),
     zmax = max(dane_kraje$homepos_trend, na.rm = TRUE),
-    colorscale = "Plasma",
+    colorscale = "YlOrRd",
     colorbar = list(
   title = "Średni HOMEPOS Trend",
   tickvals = ticki,
@@ -736,9 +758,18 @@ plot_geo(dane_kraje) %>%
 )
   ) %>%
   layout(
-    title = list(text = "Średni HOMEPOS Trend w krajach", x = 0.5),
-    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+  title = list(
+    text = "Średni HOMEPOS Trend w krajach",
+    x = 0.5,
+    font = list(size = 18, family = "Arial", color = "black")
+  ),
+  margin = list(t = 80),
+  geo = list(
+    showframe = FALSE,
+    showcoastlines = TRUE,
+    projection = list(type = "natural earth")
   )
+)
 
 ```
 
@@ -766,7 +797,7 @@ fig <- plot_geo(dane_kraje) %>%
     locationmode = "ISO-3",
     zmin = min(dane_kraje$paredint_trend, na.rm = TRUE),
     zmax = max(dane_kraje$paredint_trend, na.rm = TRUE),
-    colorscale = "Plasma",
+    colorscale = "YlOrRd",
     colorbar = list(
       title = "Średni PAREDINT Trend",
       tickvals = ticki,
@@ -776,13 +807,18 @@ fig <- plot_geo(dane_kraje) %>%
     )
   ) %>%
   layout(
-    title = list(text = "<b>Średni PAREDINT Trend w krajach</b>", x = 0.5),
-    geo = list(
-      showframe = FALSE,
-      showcoastlines = TRUE,
-      projection = list(type = "natural earth")
-    )
+  title = list(
+    text = "Średni PAREDINT Trend w krajach",
+    x = 0.5,
+    font = list(size = 18, family = "Arial", color = "black")
+  ),
+  margin = list(t = 80),
+  geo = list(
+    showframe = FALSE,
+    showcoastlines = TRUE,
+    projection = list(type = "natural earth")
   )
+)
 fig
 
 ```
