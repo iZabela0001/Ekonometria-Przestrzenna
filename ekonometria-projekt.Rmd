@@ -60,6 +60,8 @@ library(standardize)
 library(broom)
 library(gganimate)
 library(gifski)
+library(viridisLite)
+library(ragg)
 ```
 
 ```{r dane, echo=FALSE, eval=TRUE, results='asis'}
@@ -165,42 +167,7 @@ Kluczowym elementem przygotowania danych do analizy jest zapewnienie ich wysokie
 #### Braki danych
 
 Pierwszym krokiem weryfikacji jakości zbioru jest ocena jego kompletności. Poniższa analiza przedstawia skalę oraz rozkład braków danych dla kluczowych zmiennych uwzględnionych w badaniu.
-```{r top6_według_hisei-animacja, message=FALSE, warning=FALSE}
 
-dane_long <- dane %>%
-  pivot_longer(cols = c(hisei_trend, escs_trend, homepos_trend, paredint_trend),
-               names_to = "wskaźnik", values_to = "wartość") %>%
-  mutate(cycle = as.numeric(cycle)) %>%
-  group_by(cnt, cycle, wskaźnik) %>%
-  summarise(średnia = mean(wartość, na.rm = TRUE)) %>%
-  ungroup()
-
-# wybór top 6 krajów wg HISEI
-top_kraje <- dane_long %>%
-  filter(wskaźnik == "hisei_trend", cycle == max(cycle)) %>%
-  slice_max(order_by = średnia, n = 6) %>%
-  pull(cnt)
-
-dane_top <- dane_long %>%
-  filter(cnt %in% top_kraje)
-
-# Wykresy liniowe dla wybranych krajów
-p <- ggplot(dane_top, aes(x = cycle, y = średnia, group = cnt, color = cnt)) +
-  geom_line(linewidth = 1) +
-  facet_wrap(~ wskaźnik, scales = "free_y") +
-  labs(title = "Zmiany wskaźników społeczno-ekonomicznych (TOP 6 krajów wg HISEI)",
-       subtitle = "Cykl badania: {frame_along}",
-       x = "Cykl PISA",
-       y = "Średnia wartość") +
-  theme_minimal(base_size = 13) +
-  theme(legend.position = "bottom") +
-  transition_reveal(cycle)
-
-# Tworzenie animacji, tj. gifa
-animate(p, duration = 6, fps = 10, width = 900, height = 600,
-        renderer = gifski_renderer("top6_kraje_animacja.gif"))
-
-```
 
 ```{r plot-missing-summary, echo=FALSE, message=FALSE, warning=FALSE}
 # Podsumowanie braków danych
@@ -312,7 +279,6 @@ dane$paredint_trend <- as.numeric(dane$paredint_trend)
 dane$escs_trend <- as.numeric(dane$escs_trend)
 dane$homepos_trend <- as.numeric(dane$homepos_trend)
 
-
 ```
 
 ```{r, fig.height=10, fig.width=10, echo=FALSE, eval=TRUE, results='asis'}
@@ -421,9 +387,55 @@ corrplot(macierz_korelacji, method = "color",
 
 Zmienna escs_trend silnie powiązana jest zarówno z wyposażeniem domu (homepos_trend), statusem zawodowym rodziców (hisei_trend), jak i ich wykształceniem (paredint_trend), co potwierdza, że ESCS dobrze syntetyzuje te aspekty społeczno-ekonomiczne.
 
-### Wykresy: histogramy, wykresy rozrzutu, gęstości
+### Wykresy: liniowe, histogramy, wykresy rozrzutu, gęstości
 
 Uzupełnieniem numerycznej analizy statystyk opisowych jest wizualna eksploracja danych. Wykresy pozwalają na bardziej intuicyjne zrozumienie kształtu rozkładów poszczególnych zmiennych oraz na zbadanie potencjalnych zależności między nimi. W tej części zaprezentowano serię wizualizacji, aby kompleksowo zobrazować strukturę danych.
+
+#### Wykresy liniowe
+
+```{r top6_według_hisei-animacja, message=FALSE, warning=FALSE,eval = interactive()}
+
+dane_long <- dane %>%
+  pivot_longer(cols = c(hisei_trend, escs_trend, homepos_trend, paredint_trend),
+               names_to = "wskaźnik", values_to = "wartość") %>%
+  mutate(cycle = as.numeric(cycle)) %>%
+  group_by(cnt, cycle, wskaźnik) %>%
+  summarise(średnia = mean(wartość, na.rm = TRUE)) %>%
+  ungroup()
+
+# wybór top 6 krajów wg HISEI
+top_kraje <- dane_long %>%
+  filter(wskaźnik == "hisei_trend", cycle == max(cycle)) %>%
+  slice_max(order_by = średnia, n = 6) %>%
+  pull(cnt)
+
+dane_top <- dane_long %>%
+  filter(cnt %in% top_kraje)
+
+# Wykresy liniowe dla wybranych krajów
+p <- ggplot(dane_top, aes(x = cycle, y = średnia, group = cnt, color = cnt)) +
+  geom_line(linewidth = 1) +
+  facet_wrap(~ wskaźnik, scales = "free_y") +
+  labs(title = "Zmiany wskaźników społeczno-ekonomicznych (TOP 6 krajów wg HISEI)",
+       subtitle = "Cykl badania: {frame_along}",
+       x = "Cykl PISA",
+       y = "Średnia wartość") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "bottom") +
+  transition_reveal(cycle)
+
+
+# Tworzenie animacji, tj. gifa
+animate(p, 
+        duration = 6, fps = 10, width = 900, height = 600, res = 72,
+        renderer = gifski_renderer("top6_kraje_animacja.gif"))
+```
+
+
+```{r wyswietl_gifa, echo=FALSE, out.width="100%"}
+knitr::include_graphics("top6_kraje_animacja.gif")
+```
+
 
 #### Histogramy z wykresami gęstości
 
@@ -574,7 +586,7 @@ Podsumowując, wykres efektywnie ilustruje złożoną strukturę danych i dostar
 
 W celu zbadania przestrzennego zróżnicowania analizowanych zjawisk, przygotowano serię kartogramów. Każda mapa przedstawia średnią wartość wybranej zmiennej na poziomie kraju, co pozwala na identyfikację globalnych wzorców i regionalnych skupisk. Zastosowana skala barw (`plasma`) przypisuje wyższym wartościom jaśniejsze kolory (żółty), a niższym – ciemniejsze (fioletowy/granatowy). Kraje bez dostępnych danych oznaczono kolorem szarym.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE, results="FALSE"}
 dane_kraje <- dane %>%
   group_by(cnt) %>%
   summarise(
@@ -597,12 +609,154 @@ rysuj_kartogram <- function(zmienna, tytul) {
     theme_minimal()
 }
 
-rysuj_kartogram("escs_trend", "Średni ESCS Trend w krajach")
-rysuj_kartogram("hisei_trend", "Średni HISEI Trend w krajach")
-rysuj_kartogram("homepos_trend", "Średni HOMEPOS Trend w krajach")
-rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
+#rysuj_kartogram("escs_trend", "Średni ESCS Trend w krajach")
+#rysuj_kartogram("hisei_trend", "Średni HISEI Trend w krajach")
+#rysuj_kartogram("homepos_trend", "Średni HOMEPOS Trend w krajach")
+#rysuj_kartogram("paredint_trend", "Średni PAREDINT Trend w krajach")
 
 ```
+
+
+```{r interaktywna_mapa_ESCS, message=FALSE, warning=FALSE}
+
+dane_kraje <- dane %>%
+  group_by(cnt) %>%
+  summarise(escs_trend = mean(escs_trend, na.rm = TRUE))
+
+dane_kraje$hover <- paste0("Kraj: ", dane_kraje$cnt,
+                           "<br>ESCS Trend: ", round(dane_kraje$escs_trend, 2))
+
+ticki <- pretty(range(dane_kraje$escs_trend, na.rm = TRUE), n = 6)
+
+plot_geo(dane_kraje) %>%
+  add_trace(
+    type = "choropleth",
+    locations = ~cnt,
+    z = ~escs_trend,
+    text = ~hover,
+    hoverinfo = "text",
+    locationmode = "ISO-3",
+    zmin = min(dane_kraje$escs_trend, na.rm = TRUE),
+    zmax = max(dane_kraje$escs_trend, na.rm = TRUE),
+    colorscale = "Plasma",
+    colorbar = list(title = "Średni ESCS Trend", tickvals = ticki, ticktext = ticki)
+  ) %>%
+  layout(
+    title = list(text = "<b>Średni ESCS Trend w krajach</b>", x = 0.5),
+    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+  )
+
+```
+```{r interaktywna_mapa_HISEI, message=FALSE, warning=FALSE}
+
+dane_kraje <- dane %>%
+  group_by(cnt) %>%
+  summarise(hisei_trend = mean(hisei_trend, na.rm = TRUE))
+
+dane_kraje$hover <- paste0("Kraj: ", dane_kraje$cnt,
+                           "<br>HISEI Trend: ", round(dane_kraje$hisei_trend, 2))
+
+ticki <- pretty(range(dane_kraje$hisei_trend, na.rm = TRUE), n = 6)
+
+plot_geo(dane_kraje) %>%
+  add_trace(
+    type = "choropleth",
+    locations = ~cnt,
+    z = ~hisei_trend,
+    text = ~hover,
+    hoverinfo = "text",
+    locationmode = "ISO-3",
+    zmin = min(dane_kraje$hisei_trend, na.rm = TRUE),
+    zmax = max(dane_kraje$hisei_trend, na.rm = TRUE),
+    colorscale = "Plasma",
+    colorbar = list(title = "Średni HISEI Trend", tickvals = ticki, ticktext = ticki)
+  ) %>%
+  layout(
+    title = list(text = "<b>Średni HISEI Trend w krajach</b>", x = 0.5),
+    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+  )
+```
+```{r Interaktywna_mapa_HOMEPOS, message=FALSE, warning=FALSE}
+
+dane_kraje <- dane %>%
+  group_by(cnt) %>%
+  summarise(homepos_trend = mean(homepos_trend, na.rm = TRUE))
+
+dane_kraje$hover <- paste0("Kraj: ", dane_kraje$cnt,
+                           "<br>HOMEPOS Trend: ", round(dane_kraje$homepos_trend, 2))
+
+ticki <- pretty(range(dane_kraje$homepos_trend, na.rm = TRUE), n = 6)
+
+plot_geo(dane_kraje) %>%
+  add_trace(
+    type = "choropleth",
+    locations = ~cnt,
+    z = ~homepos_trend,
+    text = ~hover,
+    hoverinfo = "text",
+    locationmode = "ISO-3",
+    zmin = min(dane_kraje$homepos_trend, na.rm = TRUE),
+    zmax = max(dane_kraje$homepos_trend, na.rm = TRUE),
+    colorscale = "Plasma",
+    colorbar = list(
+  title = "Średni HOMEPOS Trend",
+  tickvals = ticki,
+  ticktext = sprintf("%.2f", ticki),
+  len = 0.8
+)
+  ) %>%
+  layout(
+    title = list(text = "<b>Średni HOMEPOS Trend w krajach</b>", x = 0.5),
+    geo = list(showframe = FALSE, showcoastlines = TRUE, projection = list(type = "natural earth"))
+  )
+
+```
+
+
+```{r interaktywna_mapa_PARIENDT, message=FALSE, warning=FALSE}
+
+dane_kraje <- dane %>%
+  group_by(cnt) %>%
+  summarise(
+    paredint_trend = mean(paredint_trend, na.rm = TRUE)
+  )
+
+dane_kraje$hover <- paste0("Kraj: ", dane_kraje$cnt,
+                           "<br>PAREDINT Trend: ", round(dane_kraje$paredint_trend, 2))
+
+ticki <- pretty(range(dane_kraje$paredint_trend, na.rm = TRUE), n = 6)
+
+fig <- plot_geo(dane_kraje) %>%
+  add_trace(
+    type = "choropleth",
+    locations = ~cnt,
+    z = ~paredint_trend,
+    text = ~hover,
+    hoverinfo = "text",
+    locationmode = "ISO-3",
+    zmin = min(dane_kraje$paredint_trend, na.rm = TRUE),
+    zmax = max(dane_kraje$paredint_trend, na.rm = TRUE),
+    colorscale = "Plasma",
+    colorbar = list(
+      title = "Średni PAREDINT Trend",
+      tickvals = ticki,
+      ticktext = ticki,
+      tickformat = ".2f",
+      len = 0.8
+    )
+  ) %>%
+  layout(
+    title = list(text = "<b>Średni PAREDINT Trend w krajach</b>", x = 0.5),
+    geo = list(
+      showframe = FALSE,
+      showcoastlines = TRUE,
+      projection = list(type = "natural earth")
+    )
+  )
+fig
+
+```
+
 
 #### Interpretacja poszczególnych map
 
